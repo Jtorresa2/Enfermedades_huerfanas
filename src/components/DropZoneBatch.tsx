@@ -1,6 +1,7 @@
 import { registrarArchivoEnCache } from '../services/exportService';
 import React, { useState, useRef } from 'react';
-import { UploadCloud, FolderUp, Sparkles, FileCheck, ExternalLink, Loader2, CheckCircle, FileText } from 'lucide-react';
+import { UploadCloud, FolderUp, Sparkles, Loader2, FileText, FileArchive } from 'lucide-react';
+import JSZip from 'jszip';
 import type { IExpedienteClinico } from '../types/clinical';
 import { procesarDocumentoArchivo } from '../services/extractionEngine';
 import { CASOS_INICIALES } from '../data/casosEjemplo';
@@ -15,8 +16,7 @@ interface DropZoneBatchProps {
 export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
   onExpedientesProcesados,
   geminiApiKey,
-  apiKey,
-  onOpenConfig
+  apiKey
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [procesando, setProcesando] = useState(false);
@@ -26,45 +26,120 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
+  const zipInputRef = useRef<HTMLInputElement>(null);
 
-  // Asegurar siempre la clave de API activa de Gemini
+  // Clave de API activa de Gemini
   const activeKey = 
     (apiKey && apiKey.trim().length > 10 ? apiKey.trim() : null) ||
     (geminiApiKey && geminiApiKey.trim().length > 10 ? geminiApiKey.trim() : null) ||
     localStorage.getItem('dusakawi_gemini_api_key') ||
     (import.meta.env.VITE_GEMINI_API_KEY || '');
 
-  const manejarArchivos = async (archivos: FileList | null) => {
-    if (!archivos || archivos.length === 0) return;
+  // Función recursiva / extractora para descomprimir .ZIP y extraer archivos soportados
+  const extraerArchivosDeZip = async (archivoZip: File): Promise<File[]> => {
+    const zip = await JSZip.loadAsync(archivoZip);
+    const extraidos: File[] = [];
+
+    const entradas = Object.entries(zip.files);
+    for (const [rutaRelativa, zipEntry] of entradas) {
+      if (zipEntry.dir) continue;
+      // Descartar archivos del sistema operativo o temporales
+      if (
+        rutaRelativa.includes('__MACOSX') || 
+        rutaRelativa.startsWith('.') || 
+        rutaRelativa.includes('/.') ||
+        rutaRelativa.endsWith('.DS_Store')
+      ) {
+        continue;
+      }
+
+      const extension = rutaRelativa.split('.').pop()?.toLowerCase() || '';
+      if (['pdf', 'docx', 'doc', 'txt'].includes(extension)) {
+        const blob = await zipEntry.async('blob');
+        const nombreArchivo = rutaRelativa.split('/').pop() || rutaRelativa;
+        
+        let tipoMime = 'application/octet-stream';
+        if (extension === 'pdf') tipoMime = 'application/pdf';
+        else if (extension === 'txt') tipoMime = 'text/plain';
+        else if (extension === 'docx') tipoMime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        else if (extension === 'doc') tipoMime = 'application/msword';
+
+        const file = new File([blob], nombreArchivo, { type: tipoMime });
+        extraidos.push(file);
+      }
+    }
+
+    return extraidos;
+  };
+
+  const manejarArchivos = async (archivosRecibidos: FileList | null) => {
+    if (!archivosRecibidos || archivosRecibidos.length === 0) return;
 
     setProcesando(true);
-    const totalArchivos = archivos.length;
+    setProgresoPorcentaje(5);
+    setProgresoTexto('Examinando archivos cargados...');
+
+    // 1. Desempaquetar si hay archivos .zip
+    const listaFinalArchivos: File[] = [];
+
+    for (let i = 0; i < archivosRecibidos.length; i++) {
+      const archivo = archivosRecibidos[i];
+      const esZip = archivo.name.toLowerCase().endsWith('.zip') || archivo.type.includes('zip');
+
+      if (esZip) {
+        setProgresoTexto(`Descomprimiendo lote .ZIP: ${archivo.name}...`);
+        setProgresoPorcentaje(10);
+        try {
+          const archivosEnZip = await extraerArchivosDeZip(archivo);
+          listaFinalArchivos.push(...archivosEnZip);
+        } catch (zipError) {
+          console.error(`Error al descomprimir ${archivo.name}:`, zipError);
+        }
+      } else {
+        const ext = archivo.name.split('.').pop()?.toLowerCase() || '';
+        if (['pdf', 'docx', 'doc', 'txt'].includes(ext)) {
+          listaFinalArchivos.push(archivo);
+        }
+      }
+    }
+
+    if (listaFinalArchivos.length === 0) {
+      setProgresoTexto('No se encontraron documentos PDF o clínicos en el archivo cargado.');
+      setTimeout(() => setProcesando(false), 2000);
+      return;
+    }
+
+    // 2. Procesar la lista de documentos en lote
+    const total = listaFinalArchivos.length;
     const nuevosExpedientes: IExpedienteClinico[] = [];
 
-    for (let i = 0; i < totalArchivos; i++) {
-      const archivo = archivos[i];
-      registrarArchivoEnCache(archivo.name, archivo);
-      setArchivoActualNombre(archivo.name);
-      setProgresoPorcentaje(20);
-      setProgresoTexto(`Analizando historia clínica: ${archivo.name}...`);
+    for (let i = 0; i < total; i++) {
+      const doc = listaFinalArchivos[i];
+      registrarArchivoEnCache(doc.name, doc);
+      setArchivoActualNombre(doc.name);
+
+      const basePct = Math.round((i / total) * 100);
+      setProgresoPorcentaje(Math.max(15, basePct));
+      setProgresoTexto(`Procesando historia clínica (${i + 1} de ${total}): ${doc.name}...`);
 
       try {
         const expediente = await procesarDocumentoArchivo(
-          archivo, 
+          doc, 
           activeKey,
-          (pct, msg) => {
-            setProgresoPorcentaje(pct);
-            setProgresoTexto(msg);
+          (pctParcial, msg) => {
+            const pctGlobal = Math.round(basePct + (pctParcial / total));
+            setProgresoPorcentaje(Math.min(99, pctGlobal));
+            setProgresoTexto(`[${i + 1}/${total}] ${msg}`);
           }
         );
         nuevosExpedientes.push(expediente);
       } catch (err) {
-        console.error(`Error procesando archivo ${archivo.name}:`, err);
+        console.error(`Error procesando archivo ${doc.name}:`, err);
       }
     }
 
     setProgresoPorcentaje(100);
-    setProgresoTexto('¡Extracción y auditoría completada con éxito!');
+    setProgresoTexto(`¡Auditoría masiva completada! ${nuevosExpedientes.length} historias registradas.`);
     setTimeout(() => {
       onExpedientesProcesados(nuevosExpedientes);
       setProcesando(false);
@@ -79,47 +154,32 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
     if (demo) {
       const nuevo: IExpedienteClinico = {
         ...demo,
-        id: 'EXP-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
-        codigoCaso: 'DU-DEMO-' + Math.floor(100 + Math.random() * 900),
-        fechaProcesamiento: new Date().toISOString().replace('T', ' ').substring(0, 16)
+        codigoCaso: `DEMO-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        fechaProcesamiento: new Date().toISOString()
       };
       onExpedientesProcesados([nuevo]);
     }
   };
 
   return (
-    <div>
-      {/* Barra informativa superior */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#065F46', fontSize: '0.88rem', fontWeight: 600 }}>
-          <FileCheck size={18} color="#059669" />
-          <span>Formatos admitidos: <strong>PDF de historias clínicas, notas médicas y fichas SIVIGILA 342</strong></span>
-        </div>
-
-        <a
-          href="https://gemini.google.com/gem/8ba842f19077"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn btn-secondary"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#6B21A8', borderColor: '#DDD6FE', background: '#F5F3FF', textDecoration: 'none', fontSize: '0.82rem' }}
-          title="Ver tu Gema configurada en Google Gemini Web"
-        >
-          <ExternalLink size={14} />
-          <span>Ver mi Gema en Gemini (gem/8ba842f19077)</span>
-        </a>
-      </div>
-
-      {/* Tarjeta Destacada de Progreso y Análisis en Vivo */}
+    <div style={{ position: 'relative' }}>
+      {/* Modal flotante de procesamiento */}
       {procesando && (
         <div style={{
-          background: 'linear-gradient(135deg, #F0FDF8 0%, #FFFFFF 100%)',
-          border: '2px solid #005A43',
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(255, 255, 255, 0.96)',
+          backdropFilter: 'blur(8px)',
           borderRadius: '16px',
-          padding: '2rem 1.5rem',
-          marginBottom: '1.5rem',
-          boxShadow: '0 12px 30px -6px rgba(0, 90, 67, 0.18)',
+          zIndex: 40,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2.5rem',
           textAlign: 'center',
-          animation: 'fadeIn 0.25s ease-out'
+          border: '2px solid rgba(0, 90, 67, 0.25)',
+          boxShadow: '0 20px 40px rgba(0, 90, 67, 0.15)'
         }}>
           <div style={{
             width: '64px',
@@ -137,16 +197,16 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
           </div>
 
           <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#005A43', margin: '0 0 0.35rem 0' }}>
-            Analizando la historia clínica...
+            Extracción y Auditoría Clínica en Lote
           </h3>
 
           <p style={{ fontSize: '0.9rem', color: '#475569', margin: '0 0 1.5rem 0', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
             <FileText size={16} color="#005A43" />
-            <span>Documento: <strong>{archivoActualNombre || 'Expediente clínico'}</strong></span>
+            <span>Documento actual: <strong>{archivoActualNombre || 'Expediente clínico'}</strong></span>
           </p>
 
           {/* Barra de Progreso Grande */}
-          <div style={{ maxWidth: '520px', margin: '0 auto 1rem' }}>
+          <div style={{ width: '100%', maxWidth: '520px', margin: '0 auto 1rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.5rem', color: '#005A43' }}>
               <span>{progresoTexto}</span>
               <span style={{ fontSize: '0.92rem' }}>{progresoPorcentaje}%</span>
@@ -176,7 +236,7 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
             borderTop: '1px solid rgba(0, 90, 67, 0.1)'
           }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: progresoPorcentaje >= 20 ? '#047857' : '#94A3B8', fontWeight: 600 }}>
-              {progresoPorcentaje >= 20 ? '✓' : '○'} Lectura PDF
+              {progresoPorcentaje >= 20 ? '✓' : '○'} Lectura Documentos / Descompresión
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: progresoPorcentaje >= 40 ? '#047857' : '#94A3B8', fontWeight: 600 }}>
               {progresoPorcentaje >= 40 ? '✓' : '○'} Extracción de Variables Clínicas
@@ -208,7 +268,14 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
           ref={fileInputRef}
           style={{ display: 'none' }}
           multiple
-          accept=".pdf,.docx,.doc,.txt"
+          accept=".zip,.pdf,.docx,.doc,.txt"
+          onChange={(e) => manejarArchivos(e.target.files)}
+        />
+        <input
+          type="file"
+          ref={zipInputRef}
+          style={{ display: 'none' }}
+          accept=".zip,application/zip,application/x-zip-compressed"
           onChange={(e) => manejarArchivos(e.target.files)}
         />
         <input
@@ -228,15 +295,26 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
         </div>
 
         <h3 className="dropzone-title">
-          Arrastra aquí tus archivos PDF o carpetas de expedientes
+          Arrastra aquí tus archivos PDF, carpetas o un archivo comprimido .ZIP
         </h3>
         <p className="dropzone-subtitle">
-          Al soltar tus documentos, la IA de Gemini extraerá automáticamente el paciente, fechas, médico tratante, especialidad, códigos <strong>CIE-10</strong>, pruebas confirmatorias <strong>CUPS</strong>, medicamentos formulados y radicado <strong>SIVIGILA 342</strong> bajo la regla de <strong>Cero Inventiva</strong>.
+          Puedes soltar un archivo <strong>.ZIP</strong> con múltiples historias clínicas o varios <strong>PDFs</strong>. La IA extraerá automáticamente datos del afiliado, fechas, médico especialista, códigos <strong>CIE-10</strong>, pruebas confirmatorias <strong>CUPS</strong> y tratamientos bajo la regla de <strong>Cero Inventiva</strong>.
         </p>
 
         <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }} onClick={(e) => e.stopPropagation()}>
           <button
+            type="button"
             className="btn btn-primary"
+            onClick={() => zipInputRef.current?.click()}
+            disabled={procesando}
+          >
+            <FileArchive size={16} />
+            <span>Cargar Archivo .ZIP Masivo</span>
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-secondary"
             onClick={() => fileInputRef.current?.click()}
             disabled={procesando}
           >
@@ -245,12 +323,13 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
           </button>
 
           <button
+            type="button"
             className="btn btn-secondary"
             onClick={() => folderInputRef.current?.click()}
             disabled={procesando}
           >
             <FolderUp size={16} />
-            <span>Cargar Carpeta Completa</span>
+            <span>Cargar Carpeta</span>
           </button>
         </div>
       </div>
