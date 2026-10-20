@@ -1,8 +1,10 @@
 
 function homologarCie10(enfermedad: string, codigoActual?: string): string {
-  if (codigoActual && codigoActual !== 'No especificado en el documento' && /^[A-Z][0-9]{2}/.test(codigoActual.trim())) {
-    return codigoActual.trim();
+  // Si el documento ya trae un código CIE-10 explícito válido (ej: D59.5, D595, E75.2, etc.)
+  if (codigoActual && codigoActual !== 'No especificado en el documento' && !codigoActual.toLowerCase().includes('inespecífico') && /^[A-Z][0-9]{2}/i.test(codigoActual.trim())) {
+    return codigoActual.trim().toUpperCase();
   }
+  
   const enf = (enfermedad || '').toLowerCase();
   if (enf.includes('paroxistica') || enf.includes('hpn') || enf.includes('nocturna') || enf.includes('marchiafava')) return 'D595';
   if (enf.includes('gaucher')) return 'E75.2';
@@ -13,36 +15,17 @@ function homologarCie10(enfermedad: string, codigoActual?: string): string {
   if (enf.includes('fibrosis') && enf.includes('quistica')) return 'E84';
   if (enf.includes('huntington')) return 'G10';
   if (enf.includes('angioedema')) return 'D84.1';
-  return codigoActual && codigoActual !== 'No especificado en el documento' ? codigoActual : 'D595';
-}
+  if (enf.includes('anemia de fanconi')) return 'D61.0';
+  if (enf.includes('aplasia') || enf.includes('aplasica')) return 'D61';
+  if (enf.includes('drepanocitosis') || enf.includes('falciforme')) return 'D57';
 
-﻿import type { IEnfermedadHuerfana, IAuditoriaFicha, IExpedienteClinico } from '../types/clinical';
-import { PROMPT_MINSALUD_SISTEMA } from '../data/casosEjemplo';
-import { CONOCIMIENTO_GEMA_DUSAKAWI } from '../data/gemaKnowledgeText';
-
-const API_KEY_DEFAULT = (import.meta.env.VITE_GEMINI_API_KEY || '');
-
-// Lista de modelos activos con alta disponibilidad en Google AI Studio (orden de prioridad)
-const MODELOS_DISPONIBLES = [
-  'gemini-flash-lite-latest',
-  'gemini-3.5-flash',
-  'gemini-3.1-flash-lite',
-  'gemini-flash-latest',
-  'gemini-pro-latest'
-];
-
-function normalizarArray(val: unknown): string[] {
-  if (!val) return [];
-  if (Array.isArray(val)) return val.map(x => String(x).trim()).filter(Boolean);
-  if (typeof val === 'string') {
-    return val.split(',').map(x => x.trim()).filter(Boolean);
+  // Si no se detectó ninguna enfermedad, NO inventar D595 bajo regla Cero Inventiva
+  if (codigoActual && codigoActual !== 'No especificado en el documento') {
+    return codigoActual.trim();
   }
-  return [String(val)];
+  return 'No especificado en el documento';
 }
 
-/**
- * Validador de Auditoría Clínica Normativa de MinSalud para DUSAKAWI EPSI
- */
 export function auditarFichaClinica(datos: IEnfermedadHuerfana, textoFuente: string): IAuditoriaFicha {
   const alertas: string[] = [];
   const fortalezas: string[] = [];
@@ -444,7 +427,7 @@ async function llamarGeminiApiConFallback(apiKey: string, texto?: string, base64
                   ? 'ID-178 (Resolución 023 de 2023 MinSalud)'
                   : ((parsed.codigo_cie10 === 'G35' || (parsed.enfermedad || '').toLowerCase().includes('esclerosis'))
                       ? 'ID-218 (Resolución 023 de 2023 MinSalud)'
-                      : 'Resolución 023 de 2023 MinSalud'))),
+                      : 'No especificado en el documento'))),
         categoria_grupo: parsed.categoria_grupo || 'Enfermedades Huérfanas de Alto Costo',
         definicion: parsed.definicion || 'Historia clínica evaluada conforme a directrices MinSalud.',
         paciente_nombre: parsed.paciente_nombre || 'No especificado en el documento',
