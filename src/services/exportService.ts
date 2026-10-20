@@ -193,7 +193,7 @@ INFORMACIÓN GENERAL DEL AFILIADO:
 --------------------------------------------------------------------------------
 1. DIAGNÓSTICO PRINCIPAL Y CLASIFICACIÓN
 - Patología Diagnosticada: ${exp.datos?.enfermedad || 'No especificado'}
-- Código CIE-10: ${exp.datos?.codigo_cie10 || 'D595'} (Oficial MinSalud)
+- Código CIE-10: ${exp.datos?.codigo_cie10 || 'No especificado en el documento'} (Oficial MinSalud)
 - ID Oficial MinSalud: ${exp.datos?.id_oficial_minsalud || 'Resolución 023 de 2023'}
 - Grupo o Categoría: ${exp.datos?.categoria_grupo || 'Enfermedad Huérfana de Alto Costo'}
 - Criterio de Confirmación: ${exp.datos?.criterio_confirmacion || 'Evaluación médica especializada y paraclínicos'}

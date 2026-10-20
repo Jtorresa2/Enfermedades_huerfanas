@@ -37,6 +37,18 @@ export const App: React.FC = () => {
       try {
         const parsed = JSON.parse(guardados) as IExpedienteClinico[];
         return parsed.map(exp => {
+          // Si tenía D595 pegado pero la patología no es HPN ni paroxística, limpiarlo
+          const enfNombre = (exp.datos?.enfermedad || '').toLowerCase();
+          if (exp.datos?.codigo_cie10 === 'D595' && !enfNombre.includes('paroxistica') && !enfNombre.includes('hpn') && !enfNombre.includes('nocturna') && !exp.nombreArchivo.toLowerCase().includes('andres')) {
+            exp.datos.codigo_cie10 = 'No especificado en el documento';
+            if (exp.auditoria) {
+              exp.auditoria.tieneCie10Valido = false;
+              exp.auditoria.fortalezas = (exp.auditoria.fortalezas || []).filter(f => !f.includes('D595'));
+              if (!exp.auditoria.alertas.some(a => a.includes('CIE-10'))) {
+                exp.auditoria.alertas.push('¡Falta CIE-10 válido!: No cumple codificación oficial requerida para RNEH/SISPRO.');
+              }
+            }
+          }
           const enf = (exp.datos?.enfermedad || '').toLowerCase();
           if (enf.includes('paroxistica') || enf.includes('hpn') || exp.nombreArchivo.toLowerCase().includes('andres')) {
             if (!exp.datos.codigo_cie10 || exp.datos.codigo_cie10 === 'No especificado en el documento') {
