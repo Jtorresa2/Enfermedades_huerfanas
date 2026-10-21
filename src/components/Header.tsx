@@ -55,6 +55,21 @@ export const Header: React.FC<HeaderProps> = ({
             <span style={{ marginLeft: '8px', background: 'rgba(255,255,255,0.2)', padding: '1px 6px', borderRadius: '10px', fontSize: '0.75rem' }}>
               {totalCasos} expedientes cargados
             </span>
+            <span style={{ 
+              marginLeft: '8px', 
+              background: 'rgba(52, 211, 153, 0.25)', 
+              border: '1px solid rgba(52, 211, 153, 0.5)', 
+              color: '#A7F3D0', 
+              padding: '2px 8px', 
+              borderRadius: '10px', 
+              fontSize: '0.74rem', 
+              fontWeight: 700, 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: '4px' 
+            }}>
+              💎 Gema DUSAKAWI Conectada (5 Fichas)
+            </span>
           </p>
         </div>
       </div>

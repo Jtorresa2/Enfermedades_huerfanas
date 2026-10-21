@@ -176,7 +176,7 @@ export const App: React.FC = () => {
           onClick={() => setActiveTab('normativa')}
         >
           <BookOpen size={18} />
-          <span>Normativa MinSalud & SIVIGILA 342</span>
+          <span>💎 Gema de Conocimiento & Normativa</span>
         </button>
 
         <button
@@ -222,9 +222,14 @@ export const App: React.FC = () => {
                 style={{ height: '42px', objectFit: 'contain' }} 
               />
               <div>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>
-                  Marco Normativo de Enfermedades Huérfanas en Colombia
-                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>
+                    💎 Gema de Conocimiento DUSAKAWI EPSI & Marco Normativo
+                  </h2>
+                  <span style={{ background: '#DCFCE7', color: '#15803D', fontSize: '0.72rem', fontWeight: 800, padding: '2px 8px', borderRadius: '12px' }}>
+                    5 FICHAS TÉCNICAS ACTIVAS
+                  </span>
+                </div>
                 <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                   Directrices obligatorias para EPS Indígenas (DUSAKAWI EPSI) y auditoría clínica.
                 </p>
@@ -266,6 +271,56 @@ export const App: React.FC = () => {
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
                   Reporte nominal con corte periódico para patologías de alto impacto financiero (Hemofilia, Enfermedades Lisosomales, FQ) que asegura el seguimiento y auditoría clínica de resultados en salud.
                 </p>
+              </div>
+            </div>
+
+            
+            {/* Sección de Fichas de la Gema DUSAKAWI */}
+            <div style={{ marginBottom: '2rem', background: '#F8FAF9', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '8px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#005A43', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>💎 Fichas Técnicas Oficiales de la Gema (Inyectadas en Gemini 3.8 Flash)</span>
+                </h3>
+                <span style={{ fontSize: '0.75rem', background: '#E0F2FE', color: '#0369A1', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
+                  74.6 KB de Reglas Médicas y Diagnósticas
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.85rem' }}>
+                <div style={{ background: 'white', padding: '1rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.86rem' }}>📄 Fichas Técnicas Huérfanas</div>
+                  <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: '4px' }}>
+                    Res. 023 de 2023 | 2.236 patologías oficiales | Criterios nosológicos y diagnóstico confirmatorio.
+                  </div>
+                </div>
+
+                <div style={{ background: 'white', padding: '1rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.86rem' }}>🩸 Coagulopatías & Hemofilia</div>
+                  <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: '4px' }}>
+                    Hemofilia A (D66) y B (D67) | Dosaje de Factor VIII y IX (&lt;1%) | Guías CAC DUSAKAWI.
+                  </div>
+                </div>
+
+                <div style={{ background: 'white', padding: '1rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.86rem' }}>🧬 Coagulopatías 2 & Von Willebrand</div>
+                  <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: '4px' }}>
+                    CIE-10 D68.0 | Aglutinina Ristocetina | Paraclínicos confirmatorios y profilaxis.
+                  </div>
+                </div>
+
+                <div style={{ background: 'white', padding: '1rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.86rem' }}>🔬 Enfermedad de Gaucher Tipo 1</div>
+                  <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: '4px' }}>
+                    CIE-10 E75.2 | Beta-glucosidasa ácida en leucocitos (CUPS 908346) | Seguimiento hematológico.
+                  </div>
+                </div>
+
+                <div style={{ background: 'white', padding: '1rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.86rem' }}>🧠 Esclerosis Múltiple</div>
+                  <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: '4px' }}>
+                    CIE-10 G35.X | Criterios McDonald | RMN cerebral con Gadolinio | Bandas oligoclonales en LCR.
+                  </div>
+                </div>
               </div>
             </div>
 
