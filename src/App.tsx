@@ -82,7 +82,21 @@ export const App: React.FC = () => {
 
 
   useEffect(() => {
-    localStorage.setItem('dusakawi_expedientes', JSON.stringify(expedientes));
+    try {
+      localStorage.setItem('dusakawi_expedientes', JSON.stringify(expedientes));
+    } catch (err) {
+      console.warn('Advertencia de cuota en localStorage. Guardando versión compacta...', err);
+      try {
+        // Reducir tamaño de textos para garantizar persistencia sin superar los 5MB del navegador
+        const compactos = expedientes.map(exp => ({
+          ...exp,
+          textoOriginal: (exp.textoOriginal || '').substring(0, 1000)
+        }));
+        localStorage.setItem('dusakawi_expedientes', JSON.stringify(compactos));
+      } catch (err2) {
+        console.error('Error crítico al persistir en localStorage:', err2);
+      }
+    }
   }, [expedientes]);
 
   const handleLogin = (nuevoUsuario: IUsuarioAutenticado) => {
