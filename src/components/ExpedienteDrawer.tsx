@@ -3,7 +3,7 @@ import {
   X, CheckCircle2, AlertTriangle, FileText, 
   ShieldCheck, User, Stethoscope, Pill, Activity, 
   Copy, Check, MapPin, Calendar, Building2, 
-  Download, FileSpreadsheet, ShieldAlert
+  Download, ShieldAlert
 } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 import type { IExpedienteClinico } from '../types/clinical';
@@ -28,14 +28,13 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
   onClose,
   tabInicial = 'auditoria'
 }) => {
-  const [tabActiva, setTabActiva] = useState<'auditoria' | 'clinica' | 'texto'>(tabInicial === 'sivigila' ? 'auditoria' : tabInicial);
+  const [tabActiva, setTabActiva] = useState<'auditoria' | 'clinica' | 'texto'>(tabInicial);
   const [copiado, setCopiado] = useState(false);
 
   if (!expediente) return null;
 
   const pruebasList = toArray(expediente.datos?.pruebas_diagnosticas_realizadas);
   const tratamientosList = toArray(expediente.datos?.tratamiento_actual);
-  const difList = toArray(expediente.datos?.diagnostico_diferencial);
 
   const copiarDictamen = () => {
     const texto = `========================================================
@@ -750,33 +749,7 @@ DICTAMEN NORMATIVO:
                 )}
               </div>
 
-              {/* Diagnóstico Diferencial */}
-              {difList.length > 0 && (
-                <div style={{
-                  background: '#FFFFFF',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '14px',
-                  padding: '1.25rem'
-                }}>
-                  <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-                    Diagnósticos Diferenciales Descartados / Considerados
-                  </h4>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {difList.map((d, i) => (
-                      <span key={i} style={{
-                        background: '#F8FAFC',
-                        border: '1px solid #E2E8F0',
-                        padding: '4px 10px',
-                        borderRadius: '6px',
-                        fontSize: '0.8rem',
-                        color: '#334155'
-                      }}>
-                        {d}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+
 
             </div>
           )}

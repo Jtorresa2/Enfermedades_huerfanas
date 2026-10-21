@@ -1,3 +1,6 @@
+import type { IEnfermedadHuerfana, IAuditoriaFicha, IExpedienteClinico } from '../types/clinical';
+import { PROMPT_MINSALUD_SISTEMA } from '../data/casosEjemplo';
+import { CONOCIMIENTO_GEMA_DUSAKAWI } from '../data/gemaKnowledgeText';
 
 function homologarCie10(enfermedad: string, codigoActual?: string): string {
   // Si el documento ya trae un código CIE-10 explícito válido (ej: D59.5, D595, E75.2, etc.)
@@ -24,6 +27,22 @@ function homologarCie10(enfermedad: string, codigoActual?: string): string {
     return codigoActual.trim();
   }
   return 'No especificado en el documento';
+}
+
+function normalizarArray(val: unknown): string[] {
+  if (!val) return [];
+  if (Array.isArray(val)) {
+    return val.map(x => {
+      if (typeof x === 'object' && x !== null) {
+        return Object.values(x).join(' - ');
+      }
+      return String(x).trim();
+    }).filter(Boolean);
+  }
+  if (typeof val === 'string') {
+    return val.split(',').map(x => x.trim()).filter(Boolean);
+  }
+  return [String(val)];
 }
 
 export function auditarFichaClinica(datos: IEnfermedadHuerfana, textoFuente: string): IAuditoriaFicha {
