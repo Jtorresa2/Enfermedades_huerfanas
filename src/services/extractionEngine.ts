@@ -353,6 +353,15 @@ export function parseadorLocalCeroInventiva(texto: string): IEnfermedadHuerfana 
   };
 }
 
+const API_KEY_DEFAULT = (import.meta.env.VITE_GEMINI_API_KEY || '');
+
+const MODELOS_DISPONIBLES = [
+  'gemini-3.8-flash',
+  'gemini-3.7-flash',
+  'gemini-3-flash-preview',
+  'gemini-3.1-pro-preview'
+];
+
 /**
  * Llamada resiliente con fallback a múltiples modelos Gemini
  */
