@@ -200,7 +200,13 @@ INFORMACIÓN GENERAL DEL AFILIADO:
 
 --------------------------------------------------------------------------------
 2. RESUMEN CLÍNICO Y NOTA DE EVOLUCIÓN
-${exp.textoOriginal ? exp.textoOriginal : 'Paciente con diagnóstico de enfermedad huérfana de alto costo en seguimiento y control médico especializado.'}
+- Resumen y Motivo de Consulta:
+  ${exp.datos?.definicion || 'Paciente en seguimiento médico especializado.'}
+
+- Hallazgos Clínicos y Síntomas Clave:
+${(exp.datos?.sintomas_clave && exp.datos.sintomas_clave.length > 0)
+  ? exp.datos.sintomas_clave.map(s => `  • ${s}`).join('\n')
+  : '  • Hallazgos documentados en historia clínica.'}
 
 --------------------------------------------------------------------------------
 3. EQUIPO MÉDICO TRATANTE

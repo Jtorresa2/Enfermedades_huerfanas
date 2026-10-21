@@ -12,14 +12,15 @@ REGLAS DE ORO (CERO INVENTIVA):
 ESTRUCTURA DE SALIDA REQUERIDA (JSON ESTRICTO):
 {
   "enfermedad": "Nombre oficial de la patología o enfermedad huérfana detectada (ej. Hemoglobinuria Paroxística Nocturna (HPN), Enfermedad de Gaucher, Hemofilia, etc.)",
-  "codigo_cie10": "Código CIE-10 oficial exacto (ej. D595, E75.2, D66, etc.). Búscalo explícitamente en el documento como CODIGO DX, COD DX, CIE-10 o junto al nombre del diagnóstico principal.",
+  "codigo_cie10": "Código CIE-10 oficial exacto (ej. D595, E75.2, D66, I10X, etc.). Si en el documento no viene el código escrito pero sí el nombre del diagnóstico, asigna el código CIE-10 oficial correspondiente de MinSalud.",
   "id_oficial_minsalud": "ID Oficial en el listado de Enfermedades Huérfanas de Colombia (Resolución 023 de 2023 o aplicable)",
   "categoria_grupo": "Clasificación nosológica o grupo de la patología",
-  "definicion": "Resumen técnico de la condición, diagnóstico y motivo de consulta",
+  "definicion": "Resumen clínico completo y detallado de la atención médica: motivo de consulta, antecedentes patológicos relevantes, resumen de la nota de evolución clínica y conducta médica.",
   "paciente_nombre": "Nombre completo del paciente o afiliado que figura en la historia",
   "identificacion_paciente": "Tipo y número de documento de identidad (ej. CC 1082836713)",
   "fecha_diagnostico": "Fecha de la consulta, atención o diagnóstico (ej. 06/08/2026)",
-  "medico_tratante": "Nombre completo del médico tratante con su registro médico si aparece",
+  "medico_tratante": "Nombre completo del médico tratante que atiende o firma la historia clínica con su registro médico si aparece",
+  "numero_historia_clinica": "Número de historia clínica o documento del paciente (solo dígitos sin puntos ni letras)",
   "especialidad_medico_tratante": "Especialidad médica que suscribe la atención (ej. Hematología, Neurología, etc.)",
   "criterio_confirmacion": "Criterio de confirmación diagnóstica (nuevo confirmado, control, prueba Gold Standard)",
   "criterios_diagnosticos_confirmatorios": [
