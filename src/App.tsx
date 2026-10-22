@@ -73,7 +73,7 @@ export const App: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'matriz' | 'extraccion' | 'normativa' | 'integracion'>('matriz');
   const [expedienteSeleccionado, setExpedienteSeleccionado] = useState<IExpedienteClinico | null>(null);
-  const [drawerTabInicial, setDrawerTabInicial] = useState<'auditoria' | 'clinica' | 'texto'>('auditoria');
+  const [drawerTabInicial, setDrawerTabInicial] = useState<'documento' | 'auditoria' | 'clinica' | 'texto'>('documento');
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
     return localStorage.getItem('dusakawi_gemini_api_key') || (import.meta.env.VITE_GEMINI_API_KEY || '');
@@ -131,7 +131,7 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleAbrirExpediente = (exp: IExpedienteClinico, tab: 'auditoria' | 'clinica' | 'texto' = 'auditoria') => {
+  const handleAbrirExpediente = (exp: IExpedienteClinico, tab: 'documento' | 'auditoria' | 'clinica' | 'texto' = 'documento') => {
     setExpedienteSeleccionado(exp);
     setDrawerTabInicial(tab);
   };

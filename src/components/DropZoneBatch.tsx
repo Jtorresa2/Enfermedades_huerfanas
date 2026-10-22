@@ -14,7 +14,7 @@ interface DropZoneBatchProps {
   geminiApiKey?: string;
   apiKey?: string;
   onOpenConfig?: () => void;
-  onVerExpediente?: (expediente: IExpedienteClinico, tabInicial?: 'auditoria' | 'clinica' | 'texto') => void;
+  onVerExpediente?: (expediente: IExpedienteClinico, tabInicial?: 'documento' | 'auditoria' | 'clinica' | 'texto') => void;
   onIrAMatriz?: () => void;
 }
 
@@ -376,7 +376,7 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
-                    onClick={() => onVerExpediente?.(exp, 'clinica')}
+                    onClick={() => onVerExpediente?.(exp, 'documento')}
                     className="btn btn-secondary"
                     style={{
                       padding: '0.45rem 0.9rem',
@@ -389,7 +389,7 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
                       alignItems: 'center',
                       gap: '6px'
                     }}
-                    title="Ver ficha clínica, CUPS, tratamientos y texto original"
+                    title="Ver documento original PDF o historia clínica completa"
                   >
                     <FileText size={15} color="#005A43" />
                     <span>Ver Historia Clínica</span>

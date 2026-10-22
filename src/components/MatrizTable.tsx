@@ -9,7 +9,7 @@ import type { IExpedienteClinico, NivelConformidad } from '../types/clinical';
 
 interface MatrizTableProps {
   expedientes: IExpedienteClinico[];
-  onSeleccionarExpediente: (expediente: IExpedienteClinico, tabInicial?: 'auditoria' | 'clinica' | 'texto') => void;
+  onSeleccionarExpediente: (expediente: IExpedienteClinico, tabInicial?: 'documento' | 'auditoria' | 'clinica' | 'texto') => void;
   onEliminarExpediente: (id: string) => void;
   onCargarNuevos?: () => void;
 }
@@ -509,8 +509,8 @@ export const MatrizTable: React.FC<MatrizTableProps> = ({
                             gap: '4px',
                             fontWeight: 600
                           }}
-                          onClick={() => onSeleccionarExpediente(exp, 'clinica')}
-                          title="Ver historia clínica, diagnóstico, procedimientos y evolución"
+                          onClick={() => onSeleccionarExpediente(exp, 'documento')}
+                          title="Ver documento original e historia clínica completa"
                         >
                           <FileText size={14} color="#005A43" /> Historia Clínica
                         </button>

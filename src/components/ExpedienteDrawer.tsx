@@ -12,7 +12,7 @@ import { obtenerArchivoDeCache } from '../services/exportService';
 interface ExpedienteDrawerProps {
   expediente: IExpedienteClinico | null;
   onClose: () => void;
-  tabInicial?: 'auditoria' | 'clinica' | 'texto';
+  tabInicial?: 'documento' | 'auditoria' | 'clinica' | 'texto';
 }
 
 const toArray = (val: unknown): string[] => {
@@ -27,10 +27,28 @@ const toArray = (val: unknown): string[] => {
 export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
   expediente,
   onClose,
-  tabInicial = 'auditoria'
+  tabInicial = 'documento'
 }) => {
-  const [tabActiva, setTabActiva] = useState<'auditoria' | 'clinica' | 'texto'>(tabInicial);
+  const [tabActiva, setTabActiva] = useState<'documento' | 'auditoria' | 'clinica' | 'texto'>(tabInicial);
   const [copiado, setCopiado] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!expediente) {
+      setPdfUrl(null);
+      return;
+    }
+    const archivo = obtenerArchivoDeCache(expediente.nombreArchivo);
+    if (archivo) {
+      const url = URL.createObjectURL(archivo);
+      setPdfUrl(url);
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    } else {
+      setPdfUrl(null);
+    }
+  }, [expediente?.id, expediente?.nombreArchivo]);
 
   useEffect(() => {
     if (tabInicial) {
@@ -249,6 +267,31 @@ DICTAMEN NORMATIVO:
           flexWrap: 'wrap'
         }}>
           <button
+            type="button"
+            onClick={() => setTabActiva('documento')}
+            style={{
+              padding: '0.45rem 1rem',
+              borderRadius: '8px',
+              border: '1.5px solid',
+              borderColor: tabActiva === 'documento' ? '#006B54' : '#CBD5E1',
+              background: tabActiva === 'documento' ? '#006B54' : 'white',
+              color: tabActiva === 'documento' ? 'white' : '#0F172A',
+              fontSize: '0.84rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s',
+              boxShadow: tabActiva === 'documento' ? '0 2px 6px rgba(0, 107, 84, 0.25)' : 'none'
+            }}
+          >
+            <FileText size={16} />
+            Documento / Historia Clínica
+          </button>
+
+          <button
+            type="button"
             onClick={() => setTabActiva('auditoria')}
             style={{
               padding: '0.45rem 0.9rem',
@@ -271,6 +314,7 @@ DICTAMEN NORMATIVO:
           </button>
 
           <button
+            type="button"
             onClick={() => setTabActiva('clinica')}
             style={{
               padding: '0.45rem 0.9rem',
@@ -292,9 +336,8 @@ DICTAMEN NORMATIVO:
             Ficha Clínica & CUPS
           </button>
 
-          
-
           <button
+            type="button"
             onClick={() => setTabActiva('texto')}
             style={{
               padding: '0.45rem 0.9rem',
@@ -313,13 +356,202 @@ DICTAMEN NORMATIVO:
               marginLeft: 'auto'
             }}
           >
-            <FileText size={15} />
-            Evidencia Textual
+            <Copy size={15} />
+            Texto Extraído
           </button>
         </div>
 
         {/* Cuerpo Principal del Panel */}
         <div style={{ padding: '1.75rem 2rem', overflowY: 'auto', flex: 1, background: '#FFFFFF' }}>
+
+          {/* TAB 0: DOCUMENTO / HISTORIA CLÍNICA (Visor PDF / Documento Original) */}
+          {tabActiva === 'documento' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              
+              {/* Barra superior del visor */}
+              <div style={{
+                background: '#F8FAF9',
+                border: '1px solid #CBD5E1',
+                borderRadius: '12px',
+                padding: '0.9rem 1.25rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '10px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ background: '#005A43', color: 'white', borderRadius: '8px', padding: '6px 8px', display: 'flex', alignItems: 'center' }}>
+                    <FileText size={18} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.94rem' }}>
+                      {expediente.nombreArchivo}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748B', display: 'flex', gap: '8px', marginTop: '2px' }}>
+                      <span>Folio / H.C. {(expediente.datos?.numero_historia_clinica || expediente.datos?.identificacion_paciente || '1082836713').replace(/\D/g, '')}</span>
+                      <span>•</span>
+                      <span>{expediente.tamanoKb || 1} KB</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {pdfUrl && (
+                    <button
+                      type="button"
+                      onClick={() => window.open(pdfUrl, '_blank')}
+                      className="btn btn-secondary"
+                      style={{ 
+                        padding: '0.4rem 0.85rem', 
+                        fontSize: '0.8rem', 
+                        color: '#005A43', 
+                        borderColor: '#A7F3D0', 
+                        background: '#ECFDF5', 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: '6px', 
+                        fontWeight: 700 
+                      }}
+                      title="Abrir el archivo original en una pestaña independiente"
+                    >
+                      <ExternalLink size={14} /> Abrir PDF en Pantalla Completa
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(expediente.textoOriginal || '');
+                      setCopiado(true);
+                      setTimeout(() => setCopiado(false), 2000);
+                    }}
+                    className="btn btn-secondary"
+                    style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    title="Copiar texto de la historia clínica"
+                  >
+                    {copiado ? <Check size={14} color="#059669" /> : <Copy size={14} />}
+                    <span>{copiado ? 'Copiado' : 'Copiar Texto'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Si tenemos el archivo original (PDF) disponible en memoria */}
+              {pdfUrl ? (
+                <div style={{
+                  border: '1.5px solid #CBD5E1',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  background: '#525659',
+                  height: '75vh',
+                  minHeight: '620px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.08)'
+                }}>
+                  <iframe
+                    src={pdfUrl}
+                    title={`Visor PDF - ${expediente.nombreArchivo}`}
+                    style={{ width: '100%', height: '100%', border: 'none' }}
+                  />
+                </div>
+              ) : (
+                /* Vista de Historia Clínica Digitalizada cuando es texto o sesión recargada */
+                <div style={{
+                  background: '#FFFFFF',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '12px',
+                  padding: '2rem',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1.25rem'
+                }}>
+                  <div style={{
+                    borderBottom: '2px solid #005A43',
+                    paddingBottom: '1rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '1rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <img src={logoImg} alt="DUSAKAWI" style={{ width: '45px', height: '45px', objectFit: 'contain' }} />
+                      <div>
+                        <div style={{ fontWeight: 800, color: '#005A43', fontSize: '1.05rem', margin: 0 }}>
+                          DUSAKAWI EPSI
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: '#64748B' }}>
+                          Historia Clínica Digitalizada • {expediente.departamentoSede}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right', fontSize: '0.8rem', color: '#475569' }}>
+                      <div><strong>N° Historia Clínica:</strong> {(expediente.datos?.numero_historia_clinica || expediente.datos?.identificacion_paciente || '1082836713').replace(/\D/g, '')}</div>
+                      <div><strong>Fecha de Atención:</strong> {expediente.datos?.fecha_diagnostico || expediente.fechaProcesamiento}</div>
+                    </div>
+                  </div>
+
+                  {/* Resumen Clínico del Paciente */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: '1rem',
+                    background: '#F8FAF9',
+                    padding: '1rem',
+                    borderRadius: '8px',
+                    fontSize: '0.82rem'
+                  }}>
+                    <div>
+                      <span style={{ color: '#64748B', fontWeight: 600 }}>Paciente / Afiliado:</span>
+                      <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
+                        {expediente.datos?.paciente_nombre || expediente.pacienteAnonimizado}
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ color: '#64748B', fontWeight: 600 }}>Médico Tratante:</span>
+                      <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
+                        {expediente.datos?.medico_tratante || 'Especialista'} ({expediente.datos?.especialidad_medico_tratante || 'Medicina Especializada'})
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ color: '#64748B', fontWeight: 600 }}>Diagnóstico Clínico:</span>
+                      <div style={{ fontWeight: 800, color: '#005A43', marginTop: '2px' }}>
+                        {expediente.datos?.enfermedad} {expediente.datos?.codigo_cie10 ? `(CIE-10: ${expediente.datos.codigo_cie10})` : ''}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Texto transcrito completo del expediente */}
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <FileText size={16} color="#005A43" />
+                      <span>Transcripción Médica de la Historia Clínica:</span>
+                    </div>
+
+                    <div style={{
+                      background: '#F8FAFC',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '8px',
+                      padding: '1.25rem',
+                      fontFamily: 'monospace',
+                      fontSize: '0.82rem',
+                      color: '#1E293B',
+                      lineHeight: 1.65,
+                      maxHeight: '520px',
+                      overflowY: 'auto',
+                      whiteSpace: 'pre-wrap'
+                    }}>
+                      {expediente.textoOriginal || 'No se cuenta con transcripción textual para este expediente.'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          )}
           
           {/* TAB 1: AUDITORÍA NORMATIVA */}
           {tabActiva === 'auditoria' && (
