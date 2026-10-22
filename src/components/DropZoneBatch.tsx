@@ -2,7 +2,7 @@ import { registrarArchivoEnCache } from '../services/exportService';
 import React, { useState, useRef } from 'react';
 import { 
   UploadCloud, FolderUp, Sparkles, Loader2, FileText, FileArchive, 
-  CheckCircle2, ShieldCheck, Table 
+  CheckCircle2, Table 
 } from 'lucide-react';
 import JSZip from 'jszip';
 import type { IExpedienteClinico } from '../types/clinical';
@@ -149,8 +149,8 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
     setProgresoPorcentaje(100);
     setProgresoTexto(`¡Auditoría completada! ${nuevosExpedientes.length} ${nuevosExpedientes.length === 1 ? 'historia registrada' : 'historias registradas'}.`);
     
-    // Guardar los expedientes en el estado global
-    onExpedientesProcesados(nuevosExpedientes, false);
+    // Guardar los expedientes en el estado global y navegar a la matriz de inmediato
+    onExpedientesProcesados(nuevosExpedientes, true);
 
     setTimeout(() => {
       setProcesando(false);
@@ -393,23 +393,6 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
                   >
                     <FileText size={15} color="#005A43" />
                     <span>Ver Historia Clínica</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => onVerExpediente?.(exp, 'auditoria')}
-                    className="btn btn-secondary"
-                    style={{
-                      padding: '0.45rem 0.9rem',
-                      fontSize: '0.82rem',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                    title="Ver dictamen de auditoría, normas y alertas"
-                  >
-                    <ShieldCheck size={15} color="#0284C7" />
-                    <span>Ver Auditoría</span>
                   </button>
                 </div>
               </div>

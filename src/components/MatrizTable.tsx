@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Search, Trash2, CheckCircle, AlertTriangle, XCircle, 
   MapPin, UploadCloud, X, RotateCcw, FolderArchive, FileSpreadsheet,
-  FileText, ShieldCheck 
+  FileText 
 } from 'lucide-react';
 import { exportarLoteOrganizadoZip, exportarMatrizExcel } from '../services/exportService';
 import type { IExpedienteClinico, NivelConformidad } from '../types/clinical';
@@ -494,19 +494,20 @@ export const MatrizTable: React.FC<MatrizTableProps> = ({
                       </div>
                     </td>
 
-                    <td>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.35rem', flexWrap: 'wrap' }}>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.45rem' }}>
                         <button
+                          type="button"
                           className="btn btn-secondary"
                           style={{ 
-                            padding: '0.38rem 0.65rem', 
+                            padding: '0.38rem 0.75rem', 
                             fontSize: '0.78rem', 
                             color: '#005A43', 
                             borderColor: '#A7F3D0', 
                             background: '#F0FDF8',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '4px',
+                            gap: '5px',
                             fontWeight: 600
                           }}
                           onClick={() => onSeleccionarExpediente(exp, 'documento')}
@@ -515,22 +516,18 @@ export const MatrizTable: React.FC<MatrizTableProps> = ({
                           <FileText size={14} color="#005A43" /> Historia Clínica
                         </button>
                         <button
+                          type="button"
                           className="btn btn-secondary"
                           style={{ 
-                            padding: '0.38rem 0.65rem', 
-                            fontSize: '0.78rem',
+                            padding: '0.38rem 0.55rem', 
+                            color: '#DC2626',
+                            borderColor: '#FECACA',
+                            background: '#FEF2F2',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '4px'
+                            justifyContent: 'center',
+                            borderRadius: '8px'
                           }}
-                          onClick={() => onSeleccionarExpediente(exp, 'auditoria')}
-                          title="Inspeccionar dictamen de auditoría y alertas normativas"
-                        >
-                          <ShieldCheck size={14} color="#0284C7" /> Auditoría
-                        </button>
-                        <button
-                          className="btn btn-secondary"
-                          style={{ padding: '0.38rem 0.5rem', color: '#DC2626' }}
                           onClick={() => setExpedienteAEliminar(exp)}
                           title="Eliminar de la sesión actual"
                         >

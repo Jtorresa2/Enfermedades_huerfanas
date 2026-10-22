@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, CheckCircle2, AlertTriangle, FileText, 
   ShieldCheck, User, Stethoscope, Pill, Activity, 
   Copy, Check, MapPin, Calendar, Building2, 
-  Download, ShieldAlert, ExternalLink
+  Download, ShieldAlert, ExternalLink, Upload 
 } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 import type { IExpedienteClinico } from '../types/clinical';
-import { obtenerArchivoDeCache } from '../services/exportService';
+import { 
+  obtenerArchivoDeCache, 
+  obtenerArchivoDeCacheAsync, 
+  registrarArchivoEnCache 
+} from '../services/exportService';
 
 interface ExpedienteDrawerProps {
   expediente: IExpedienteClinico | null;
@@ -30,25 +34,99 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
   tabInicial = 'documento'
 }) => {
   const [tabActiva, setTabActiva] = useState<'documento' | 'auditoria' | 'clinica' | 'texto'>(tabInicial);
+  const [vistaModalidad, setVistaModalidad] = useState<'archivo' | 'historia'>('archivo');
   const [copiado, setCopiado] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const activeUrlRef = useRef<string | null>(null);
+
+  const actualizarPdfUrl = (nuevaUrl: string | null) => {
+    if (activeUrlRef.current && activeUrlRef.current !== nuevaUrl) {
+      URL.revokeObjectURL(activeUrlRef.current);
+    }
+    activeUrlRef.current = nuevaUrl;
+    setPdfUrl(nuevaUrl);
+  };
+
+  const handleAdjuntarPdfManual = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !expediente) return;
+
+    registrarArchivoEnCache(expediente.nombreArchivo, file);
+    registrarArchivoEnCache(file.name, file);
+    const url = URL.createObjectURL(file);
+    actualizarPdfUrl(url);
+  };
 
   useEffect(() => {
-    if (!expediente) {
-      setPdfUrl(null);
-      return;
+    let cancelado = false;
+
+    async function resolverPdf() {
+      if (!expediente) {
+        actualizarPdfUrl(null);
+        return;
+      }
+
+      // 1. Intentar desde memoria inmediata
+      const archivoMem = obtenerArchivoDeCache(expediente.nombreArchivo);
+      if (archivoMem) {
+        const blobPdf = archivoMem.type === 'application/pdf'
+          ? archivoMem
+          : new Blob([archivoMem], { type: 'application/pdf' });
+        actualizarPdfUrl(URL.createObjectURL(blobPdf));
+        return;
+      }
+
+      // 2. Intentar desde IndexedDB
+      const archivoIdb = await obtenerArchivoDeCacheAsync(expediente.nombreArchivo);
+      if (archivoIdb && !cancelado) {
+        const blobPdf = archivoIdb.type === 'application/pdf'
+          ? archivoIdb
+          : new Blob([archivoIdb], { type: 'application/pdf' });
+        actualizarPdfUrl(URL.createObjectURL(blobPdf));
+        return;
+      }
+
+      // 3. Si el expediente tiene archivoBase64 guardado de un PDF real
+      if (expediente.archivoBase64 && !cancelado) {
+        try {
+          const raw = atob(expediente.archivoBase64);
+          const rawLength = raw.length;
+          const uInt8Array = new Uint8Array(rawLength);
+          for (let i = 0; i < rawLength; ++i) {
+            uInt8Array[i] = raw.charCodeAt(i);
+          }
+          const blob = new Blob([uInt8Array], { type: 'application/pdf' });
+          registrarArchivoEnCache(expediente.nombreArchivo, blob);
+          actualizarPdfUrl(URL.createObjectURL(blob));
+          return;
+        } catch (e) {
+          console.warn('Error cargando PDF desde base64:', e);
+        }
+      }
+
+      // Si no hay archivo PDF físico cargado, no inventamos un PDF artificial:
+      // se muestra directamente la Historia Clínica digitalizada con su contenido real
+      if (!cancelado) {
+        actualizarPdfUrl(null);
+      }
     }
-    const archivo = obtenerArchivoDeCache(expediente.nombreArchivo);
-    if (archivo) {
-      const url = URL.createObjectURL(archivo);
-      setPdfUrl(url);
-      return () => {
-        URL.revokeObjectURL(url);
-      };
-    } else {
-      setPdfUrl(null);
-    }
-  }, [expediente?.id, expediente?.nombreArchivo]);
+
+    resolverPdf();
+
+    return () => {
+      cancelado = true;
+    };
+  }, [expediente?.id, expediente?.nombreArchivo, expediente?.archivoBase64]);
+
+  useEffect(() => {
+    return () => {
+      if (activeUrlRef.current) {
+        URL.revokeObjectURL(activeUrlRef.current);
+        activeUrlRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (tabInicial) {
@@ -396,7 +474,58 @@ DICTAMEN NORMATIVO:
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="application/pdf,.pdf"
+                    style={{ display: 'none' }}
+                    onChange={handleAdjuntarPdfManual}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="btn btn-secondary"
+                    style={{ 
+                      padding: '0.4rem 0.85rem', 
+                      fontSize: '0.8rem', 
+                      color: '#005A43', 
+                      borderColor: '#A7F3D0', 
+                      background: '#ECFDF5', 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '6px', 
+                      fontWeight: 700 
+                    }}
+                    title="Cargar o cambiar el archivo PDF de esta historia clínica desde tu equipo"
+                  >
+                    <Upload size={14} /> Adjuntar / Cambiar PDF
+                  </button>
+
+                  {pdfUrl && (
+                    <a
+                      href={pdfUrl}
+                      download={expediente.nombreArchivo.toLowerCase().endsWith('.pdf') ? expediente.nombreArchivo : `${expediente.nombreArchivo}.pdf`}
+                      className="btn btn-secondary"
+                      style={{ 
+                        padding: '0.4rem 0.85rem', 
+                        fontSize: '0.8rem', 
+                        color: '#1E293B', 
+                        borderColor: '#CBD5E1', 
+                        background: '#FFFFFF', 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: '6px', 
+                        fontWeight: 600,
+                        textDecoration: 'none'
+                      }}
+                      title="Descargar este archivo PDF a tu equipo"
+                    >
+                      <Download size={14} /> Descargar PDF
+                    </a>
+                  )}
+
                   {pdfUrl && (
                     <button
                       type="button"
@@ -415,8 +544,45 @@ DICTAMEN NORMATIVO:
                       }}
                       title="Abrir el archivo original en una pestaña independiente"
                     >
-                      <ExternalLink size={14} /> Abrir PDF en Pantalla Completa
+                      <ExternalLink size={14} /> Abrir PDF Completo
                     </button>
+                  )}
+
+                  {pdfUrl && (
+                    <div style={{ display: 'inline-flex', background: '#E2E8F0', padding: '2px', borderRadius: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setVistaModalidad('archivo')}
+                        style={{
+                          padding: '0.3rem 0.65rem',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: vistaModalidad === 'archivo' ? '#005A43' : 'transparent',
+                          color: vistaModalidad === 'archivo' ? '#FFFFFF' : '#475569',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        📄 Archivo PDF
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVistaModalidad('historia')}
+                        style={{
+                          padding: '0.3rem 0.65rem',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: vistaModalidad === 'historia' ? '#005A43' : 'transparent',
+                          color: vistaModalidad === 'historia' ? '#FFFFFF' : '#475569',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        📋 Historia Clínica
+                      </button>
+                    </div>
                   )}
 
                   <button
@@ -436,24 +602,30 @@ DICTAMEN NORMATIVO:
                 </div>
               </div>
 
-              {/* Si tenemos el archivo original (PDF) disponible en memoria */}
-              {pdfUrl ? (
+              {/* Visor PDF Nativo si el usuario subió un PDF y tiene seleccionada la vista de archivo */}
+              {pdfUrl && vistaModalidad === 'archivo' ? (
                 <div style={{
                   border: '1.5px solid #CBD5E1',
                   borderRadius: '12px',
                   overflow: 'hidden',
                   background: '#525659',
                   height: '75vh',
-                  minHeight: '620px',
+                  minHeight: '640px',
                   display: 'flex',
                   flexDirection: 'column',
                   boxShadow: '0 4px 14px rgba(0,0,0,0.08)'
                 }}>
-                  <iframe
-                    src={pdfUrl}
-                    title={`Visor PDF - ${expediente.nombreArchivo}`}
+                  <object
+                    data={`${pdfUrl}#toolbar=1&navpanes=1`}
+                    type="application/pdf"
                     style={{ width: '100%', height: '100%', border: 'none' }}
-                  />
+                  >
+                    <iframe
+                      src={`${pdfUrl}#toolbar=1`}
+                      title={`Visor PDF - ${expediente.nombreArchivo}`}
+                      style={{ width: '100%', height: '100%', border: 'none' }}
+                    />
+                  </object>
                 </div>
               ) : (
                 /* Vista de Historia Clínica Digitalizada cuando es texto o sesión recargada */

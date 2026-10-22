@@ -35,7 +35,12 @@ export const App: React.FC = () => {
     const guardados = localStorage.getItem('dusakawi_expedientes');
     if (guardados) {
       try {
-        const parsed = JSON.parse(guardados) as IExpedienteClinico[];
+        const parsedRaw = JSON.parse(guardados) as IExpedienteClinico[];
+        // Descartar antiguos casos demo precargados para asegurar que solo salga 1 sola historia
+        const parsed = parsedRaw.filter(exp => exp.origen !== 'CASO_PRECARGADO');
+        if (parsed.length === 0) {
+          return CASOS_INICIALES;
+        }
         return parsed.map(exp => {
           // Si tenía D595 pegado pero la patología no es HPN ni paroxística, limpiarlo
           const enfNombre = (exp.datos?.enfermedad || '').toLowerCase();

@@ -61,6 +61,7 @@ export interface IExpedienteClinico {
   datos: IEnfermedadHuerfana;
   auditoria: IAuditoriaFicha;
   textoOriginal: string;
+  archivoBase64?: string;
 }
 
 export interface IConfiguracionIntegracion {
