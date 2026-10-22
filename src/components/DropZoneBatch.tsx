@@ -80,8 +80,46 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
     return extraidos;
   };
 
-  const manejarArchivos = async (archivosRecibidos: FileList | null) => {
-    if (!archivosRecibidos || archivosRecibidos.length === 0) return;
+  // Función recursiva para extraer archivos de carpetas arrastradas (DataTransferItem / FileSystemEntry)
+  const extraerArchivosDeEntry = async (entry: any): Promise<File[]> => {
+    if (!entry) return [];
+    if (entry.isFile) {
+      return new Promise<File[]>((resolve) => {
+        entry.file(
+          (file: File) => resolve([file]),
+          () => resolve([])
+        );
+      });
+    }
+    if (entry.isDirectory) {
+      return new Promise<File[]>((resolve) => {
+        const dirReader = entry.createReader();
+        const entriesTotales: any[] = [];
+        const leer = () => {
+          dirReader.readEntries(
+            async (entries: any[]) => {
+              if (!entries || entries.length === 0) {
+                const promesas = entriesTotales.map(e => extraerArchivosDeEntry(e));
+                const resultados = await Promise.all(promesas);
+                resolve(resultados.flat());
+              } else {
+                entriesTotales.push(...entries);
+                leer();
+              }
+            },
+            () => resolve([])
+          );
+        };
+        leer();
+      });
+    }
+    return [];
+  };
+
+  const manejarArchivos = async (archivosRecibidos: FileList | File[] | null) => {
+    if (!archivosRecibidos) return;
+    const arrayArchivos = Array.from(archivosRecibidos);
+    if (arrayArchivos.length === 0) return;
 
     setProcesando(true);
     setProgresoPorcentaje(5);
@@ -90,8 +128,8 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
     // 1. Desempaquetar si hay archivos .zip
     const listaFinalArchivos: File[] = [];
 
-    for (let i = 0; i < archivosRecibidos.length; i++) {
-      const archivo = archivosRecibidos[i];
+    for (let i = 0; i < arrayArchivos.length; i++) {
+      const archivo = arrayArchivos[i];
       const esZip = archivo.name.toLowerCase().endsWith('.zip') || archivo.type.includes('zip');
 
       if (esZip) {
@@ -112,7 +150,7 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
     }
 
     if (listaFinalArchivos.length === 0) {
-      setProgresoTexto('No se encontraron documentos PDF o clínicos en el archivo cargado.');
+      setProgresoTexto('No se encontraron documentos PDF o clínicos en el archivo o carpeta cargada.');
       setTimeout(() => setProcesando(false), 2000);
       return;
     }
@@ -406,10 +444,40 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
         className={`dropzone-container ${isDragging ? 'dragging' : ''}`}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
-        onDrop={(e) => {
+        onDrop={async (e) => {
           e.preventDefault();
           setIsDragging(false);
-          manejarArchivos(e.dataTransfer.files);
+
+          try {
+            // Verificar si hay items con carpetas arrastradas desde Windows
+            const items = e.dataTransfer.items;
+            if (items && items.length > 0) {
+              const promesas: Promise<File[]>[] = [];
+              for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                const entry = (item as any).webkitGetAsEntry ? (item as any).webkitGetAsEntry() : null;
+                if (entry) {
+                  promesas.push(extraerArchivosDeEntry(entry));
+                  continue;
+                }
+                const f = item.getAsFile();
+                if (f) promesas.push(Promise.resolve([f]));
+              }
+
+              const matriz = await Promise.all(promesas);
+              const extraidos = matriz.flat();
+              if (extraidos.length > 0) {
+                await manejarArchivos(extraidos);
+                return;
+              }
+            }
+          } catch (err) {
+            console.warn("Fallo al inspeccionar carpetas con FileSystem API, usando fallback:", err);
+          }
+
+          if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            manejarArchivos(e.dataTransfer.files);
+          }
         }}
         onClick={() => fileInputRef.current?.click()}
       >
@@ -419,25 +487,33 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
           style={{ display: 'none' }}
           multiple
           accept=".zip,.pdf,.docx,.doc,.txt"
-          onChange={(e) => manejarArchivos(e.target.files)}
+          onChange={(e) => {
+            if (e.target.files) manejarArchivos(e.target.files);
+            e.target.value = '';
+          }}
         />
         <input
           type="file"
           ref={zipInputRef}
           style={{ display: 'none' }}
           accept=".zip,application/zip,application/x-zip-compressed"
-          onChange={(e) => manejarArchivos(e.target.files)}
+          onChange={(e) => {
+            if (e.target.files) manejarArchivos(e.target.files);
+            e.target.value = '';
+          }}
         />
         <input
           type="file"
           ref={folderInputRef}
           style={{ display: 'none' }}
-          // @ts-ignore
-          webkitdirectory="true"
-          // @ts-ignore
-          directory="true"
+          {...({ webkitdirectory: '', mozdirectory: '', directory: '' } as Record<string, string>)}
           multiple
-          onChange={(e) => manejarArchivos(e.target.files)}
+          onChange={(e) => {
+            if (e.target.files && e.target.files.length > 0) {
+              manejarArchivos(e.target.files);
+            }
+            e.target.value = '';
+          }}
         />
 
         <div className="dropzone-icon">
