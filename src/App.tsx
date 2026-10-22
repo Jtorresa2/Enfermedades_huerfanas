@@ -359,7 +359,7 @@ export const App: React.FC = () => {
                 className="btn btn-primary"
                 onClick={() => setConfigModalOpen(true)}
               >
-                Abrir Configuración de Webhooks y API Key
+                Configurar Google Gemini API Key
               </button>
             </div>
 
