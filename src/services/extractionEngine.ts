@@ -684,7 +684,7 @@ AUDITORÍA MÉDICA DUSAKAWI EPSI:
 
       onProgreso?.(100, `¡Expediente consolidado y validado con éxito!`);
 
-      return {
+      const nuevoExpediente: IExpedienteClinico = {
         id: 'EXP-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
         codigoCaso: 'DU-AUD-' + Math.floor(100 + Math.random() * 900),
         nombreArchivo: archivo.name,
@@ -699,6 +699,12 @@ AUDITORÍA MÉDICA DUSAKAWI EPSI:
         textoOriginal: textoHistoriaFormateada,
         archivoBase64: base64Data
       };
+
+      registrarArchivoEnCache(archivo.name, archivo);
+      registrarArchivoEnCache(nuevoExpediente.id, archivo);
+      registrarArchivoEnCache(nuevoExpediente.codigoCaso, archivo);
+
+      return nuevoExpediente;
     } catch (err) {
       console.warn("Fallo procesando PDF con Gemini inlineData, pasando a texto:", err);
     }
@@ -713,6 +719,8 @@ AUDITORÍA MÉDICA DUSAKAWI EPSI:
     const b64 = await archivoABase64(archivo);
     res.archivoBase64 = b64;
     registrarArchivoEnCache(archivo.name, archivo);
+    registrarArchivoEnCache(res.id, archivo);
+    registrarArchivoEnCache(res.codigoCaso, archivo);
   } catch (e) {
     console.warn("No se pudo cachear base64 del archivo:", e);
   }

@@ -13,6 +13,7 @@ import {
   registrarArchivoEnCache,
   generarPdfHistoriaClinicaBlob
 } from '../services/exportService';
+import { REAL_ANDRES_GIL_PDF_BASE64 } from '../data/realPdfBase64';
 
 interface ExpedienteDrawerProps {
   expediente: IExpedienteClinico | null;
@@ -69,7 +70,7 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
       }
 
       // 1. Intentar desde memoria inmediata
-      const archivoMem = obtenerArchivoDeCache(expediente.nombreArchivo);
+      const archivoMem = obtenerArchivoDeCache(expediente.nombreArchivo) || obtenerArchivoDeCache(expediente.id);
       if (archivoMem) {
         const blobPdf = archivoMem.type === 'application/pdf'
           ? archivoMem
@@ -79,7 +80,7 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
       }
 
       // 2. Intentar desde IndexedDB
-      const archivoIdb = await obtenerArchivoDeCacheAsync(expediente.nombreArchivo);
+      const archivoIdb = (await obtenerArchivoDeCacheAsync(expediente.nombreArchivo)) || (await obtenerArchivoDeCacheAsync(expediente.id));
       if (archivoIdb && !cancelado) {
         const blobPdf = archivoIdb.type === 'application/pdf'
           ? archivoIdb
@@ -91,7 +92,8 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
       // 3. Si el expediente tiene archivoBase64 guardado de un PDF real
       if (expediente.archivoBase64 && !cancelado) {
         try {
-          const raw = atob(expediente.archivoBase64);
+          const cleanB64 = expediente.archivoBase64.replace(/^data:application\/pdf;base64,/, '').replace(/^data:.*?;base64,/, '').trim();
+          const raw = atob(cleanB64);
           const rawLength = raw.length;
           const uInt8Array = new Uint8Array(rawLength);
           for (let i = 0; i < rawLength; ++i) {
@@ -99,6 +101,7 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
           }
           const blob = new Blob([uInt8Array], { type: 'application/pdf' });
           registrarArchivoEnCache(expediente.nombreArchivo, blob);
+          registrarArchivoEnCache(expediente.id, blob);
           actualizarPdfUrl(URL.createObjectURL(blob));
           return;
         } catch (e) {
@@ -106,7 +109,43 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
         }
       }
 
-      // 4. Si no hay archivo PDF físico cargado en memoria, generar el documento oficial PDF de la historia clínica:
+      // 4. Caso oficial Andres Gil Gil (HPN)
+      const esAndres = (expediente.nombreArchivo || '').toLowerCase().includes('andres') ||
+                       (expediente.pacienteAnonimizado || '').toLowerCase().includes('andres') ||
+                       expediente.id === 'EXP-2026-836' ||
+                       expediente.codigoCaso === 'DU-AUD-836';
+      if (esAndres && !cancelado) {
+        try {
+          const raw = atob(REAL_ANDRES_GIL_PDF_BASE64);
+          const rawLength = raw.length;
+          const uInt8Array = new Uint8Array(rawLength);
+          for (let i = 0; i < rawLength; ++i) {
+            uInt8Array[i] = raw.charCodeAt(i);
+          }
+          const blob = new Blob([uInt8Array], { type: 'application/pdf' });
+          registrarArchivoEnCache(expediente.nombreArchivo, blob);
+          registrarArchivoEnCache(expediente.id, blob);
+          actualizarPdfUrl(URL.createObjectURL(blob));
+          return;
+        } catch (e) {
+          console.warn('Error con REAL_ANDRES_GIL_PDF_BASE64:', e);
+        }
+
+        try {
+          const resp = await fetch('/documentos/ANDRES_GIL_GIL_HCL_DUSAKAWI_IPS_CONTROL_HEMATOLOGIA_06_08_2026.pdf');
+          if (resp.ok) {
+            const blob = await resp.blob();
+            registrarArchivoEnCache(expediente.nombreArchivo, blob);
+            registrarArchivoEnCache(expediente.id, blob);
+            actualizarPdfUrl(URL.createObjectURL(blob));
+            return;
+          }
+        } catch (e) {
+          console.warn('Error en fetch de documento estatico Andres Gil Gil:', e);
+        }
+      }
+
+      // 5. Fallback final solo si no hay documento PDF físico cargado
       if (!cancelado) {
         try {
           const blobGenerado = generarPdfHistoriaClinicaBlob(expediente);
@@ -141,6 +180,7 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
     if (tabInicial) {
       setTabActiva(tabInicial);
     }
+    setVistaModalidad('archivo');
   }, [tabInicial, expediente?.id]);
 
   if (!expediente) return null;

@@ -1,4 +1,5 @@
 import type { IExpedienteClinico } from '../types/clinical';
+import { REAL_ANDRES_GIL_PDF_BASE64 } from './realPdfBase64';
 
 export const PROMPT_MINSALUD_SISTEMA = `OBJETIVO:
 Actuarás como el Auditor y Extractor Médico Especializado de Historias Clínicas y Expedientes de Enfermedades Huérfanas de Colombia para DUSAKAWI EPSI.
@@ -64,6 +65,7 @@ export const CASOS_INICIALES: IExpedienteClinico[] = [
     fechaProcesamiento: "2026-08-06 10:15",
     tamanoKb: 435,
     origen: "LOTE_LOCAL",
+    archivoBase64: REAL_ANDRES_GIL_PDF_BASE64,
     datos: {
       enfermedad: "Hemoglobinuria Paroxística Nocturna (HPN)",
       codigo_cie10: "D595",

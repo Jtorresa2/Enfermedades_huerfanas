@@ -132,36 +132,81 @@ function openDusakawiDB(): Promise<IDBDatabase> {
 }
 
 export function registrarArchivoEnCache(nombreArchivo: string, archivo: Blob | File) {
+  if (!nombreArchivo) return;
   cacheArchivosOriginales.set(nombreArchivo, archivo);
+  const normKey = nombreArchivo.toLowerCase().trim();
+  cacheArchivosOriginales.set(normKey, archivo);
+  const cleanKey = normKey.replace(/[\s_.-]+/g, '');
+  cacheArchivosOriginales.set(cleanKey, archivo);
+
   // Persistir asíncronamente en IndexedDB para que sobreviva a recargas del navegador
   openDusakawiDB().then(db => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).put(archivo, nombreArchivo);
+    const store = tx.objectStore(STORE_NAME);
+    store.put(archivo, nombreArchivo);
+    store.put(archivo, normKey);
+    store.put(archivo, cleanKey);
   }).catch(() => {});
 }
 
 export function obtenerArchivoDeCache(nombreArchivo: string): (Blob | File) | undefined {
-  return cacheArchivosOriginales.get(nombreArchivo);
-}
-
-export async function obtenerArchivoDeCacheAsync(nombreArchivo: string): Promise<(Blob | File) | undefined> {
+  if (!nombreArchivo) return undefined;
   if (cacheArchivosOriginales.has(nombreArchivo)) {
     return cacheArchivosOriginales.get(nombreArchivo);
   }
+  const normKey = nombreArchivo.toLowerCase().trim();
+  if (cacheArchivosOriginales.has(normKey)) {
+    return cacheArchivosOriginales.get(normKey);
+  }
+  const cleanKey = normKey.replace(/[\s_.-]+/g, '');
+  if (cacheArchivosOriginales.has(cleanKey)) {
+    return cacheArchivosOriginales.get(cleanKey);
+  }
+  return undefined;
+}
+
+export async function obtenerArchivoDeCacheAsync(nombreArchivo: string): Promise<(Blob | File) | undefined> {
+  if (!nombreArchivo) return undefined;
+  const enMemoria = obtenerArchivoDeCache(nombreArchivo);
+  if (enMemoria) return enMemoria;
+
+  const normKey = nombreArchivo.toLowerCase().trim();
+  const cleanKey = normKey.replace(/[\s_.-]+/g, '');
+
   try {
     const db = await openDusakawiDB();
     return new Promise((resolve) => {
       const tx = db.transaction(STORE_NAME, 'readonly');
-      const req = tx.objectStore(STORE_NAME).get(nombreArchivo);
-      req.onsuccess = () => {
-        if (req.result) {
-          cacheArchivosOriginales.set(nombreArchivo, req.result);
-          resolve(req.result);
-        } else {
-          resolve(undefined);
+      const store = tx.objectStore(STORE_NAME);
+      
+      const req1 = store.get(nombreArchivo);
+      req1.onsuccess = () => {
+        if (req1.result) {
+          cacheArchivosOriginales.set(nombreArchivo, req1.result);
+          resolve(req1.result);
+          return;
         }
+        const req2 = store.get(normKey);
+        req2.onsuccess = () => {
+          if (req2.result) {
+            cacheArchivosOriginales.set(normKey, req2.result);
+            resolve(req2.result);
+            return;
+          }
+          const req3 = store.get(cleanKey);
+          req3.onsuccess = () => {
+            if (req3.result) {
+              cacheArchivosOriginales.set(cleanKey, req3.result);
+              resolve(req3.result);
+            } else {
+              resolve(undefined);
+            }
+          };
+          req3.onerror = () => resolve(undefined);
+        };
+        req2.onerror = () => resolve(undefined);
       };
-      req.onerror = () => resolve(undefined);
+      req1.onerror = () => resolve(undefined);
     });
   } catch {
     return undefined;
