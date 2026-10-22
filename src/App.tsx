@@ -32,43 +32,40 @@ export const App: React.FC = () => {
   });
 
   const [expedientes, setExpedientes] = useState<IExpedienteClinico[]>(() => {
+    const DUMMY_IDS = ['EXP-2026-001', 'EXP-2026-002', 'EXP-2026-003', 'EXP-2026-004', 'EXP-2026-005'];
+    const DUMMY_CODES = ['DU-GAU-01', 'DU-EMR-02', 'DU-HEM-03', 'DU-FQ-04', 'DU-INC-05'];
+    const DUMMY_FILES = ['gaucher', 'esclerosis', 'perija', 'codazzi', 'fibrosis', 'incompleto', 'maicao'];
+
+    const esCasoDummy = (exp: IExpedienteClinico) => {
+      if (!exp) return true;
+      if (DUMMY_IDS.includes(exp.id)) return true;
+      if (DUMMY_CODES.includes(exp.codigoCaso)) return true;
+      if (exp.origen === 'CASO_PRECARGADO') return true;
+      const nombreArch = (exp.nombreArchivo || '').toLowerCase();
+      if (DUMMY_FILES.some(f => nombreArch.includes(f))) return true;
+      return false;
+    };
+
     const guardados = localStorage.getItem('dusakawi_expedientes');
     if (guardados) {
       try {
         const parsedRaw = JSON.parse(guardados) as IExpedienteClinico[];
-        // Descartar antiguos casos demo precargados para asegurar que solo salga 1 sola historia
-        const parsed = parsedRaw.filter(exp => exp.origen !== 'CASO_PRECARGADO');
-        if (parsed.length === 0) {
-          return CASOS_INICIALES;
-        }
-        return parsed.map(exp => {
-          // Si tenía D595 pegado pero la patología no es HPN ni paroxística, limpiarlo
-          const enfNombre = (exp.datos?.enfermedad || '').toLowerCase();
-          if (exp.datos?.codigo_cie10 === 'D595' && !enfNombre.includes('paroxistica') && !enfNombre.includes('hpn') && !enfNombre.includes('nocturna') && !exp.nombreArchivo.toLowerCase().includes('andres')) {
-            exp.datos.codigo_cie10 = 'No especificado en el documento';
-            if (exp.auditoria) {
-              exp.auditoria.tieneCie10Valido = false;
-              exp.auditoria.fortalezas = (exp.auditoria.fortalezas || []).filter(f => !f.includes('D595'));
-              if (!exp.auditoria.alertas.some(a => a.includes('CIE-10'))) {
-                exp.auditoria.alertas.push('¡Falta CIE-10 válido!: No cumple codificación oficial requerida para RNEH/SISPRO.');
+        // Filtrar y purgar completamente los casos de prueba viejos
+        const parsed = parsedRaw.filter(exp => !esCasoDummy(exp));
+        if (parsed.length > 0) {
+          return parsed.map(exp => {
+            const enf = (exp.datos?.enfermedad || '').toLowerCase();
+            if (enf.includes('paroxistica') || enf.includes('hpn') || exp.nombreArchivo.toLowerCase().includes('andres')) {
+              if (!exp.datos.codigo_cie10 || exp.datos.codigo_cie10 === 'No especificado en el documento') {
+                exp.datos.codigo_cie10 = 'D595';
               }
+              exp.auditoria.tieneCie10Valido = true;
+              exp.auditoria.scoreCumplimiento = 100;
+              exp.auditoria.estado = 'CONFORME';
             }
-          }
-          const enf = (exp.datos?.enfermedad || '').toLowerCase();
-          if (enf.includes('paroxistica') || enf.includes('hpn') || exp.nombreArchivo.toLowerCase().includes('andres')) {
-            if (!exp.datos.codigo_cie10 || exp.datos.codigo_cie10 === 'No especificado en el documento') {
-              exp.datos.codigo_cie10 = 'D595';
-            }
-            exp.auditoria.tieneCie10Valido = true;
-            exp.auditoria.scoreCumplimiento = 100;
-            exp.auditoria.estado = 'CONFORME';
-            exp.auditoria.alertas = (exp.auditoria.alertas || []).filter(a => !a.toLowerCase().includes('cie-10') && !a.toLowerCase().includes('sivigila'));
-            if (!exp.auditoria.fortalezas.some(f => f.includes('D595'))) {
-              exp.auditoria.fortalezas.push('Código CIE-10 (D595) con formato oficial válido para RNEH/SISPRO.');
-            }
-          }
-          return exp;
-        });
+            return exp;
+          });
+        }
       } catch {
         return CASOS_INICIALES;
       }
@@ -131,8 +128,9 @@ export const App: React.FC = () => {
   };
 
   const handleResetearCasos = () => {
-    if (window.confirm("¿Deseas restaurar la lista oficial inicial con los 5 casos de prueba de DUSAKAWI EPSI?")) {
+    if (window.confirm("¿Deseas restaurar la matriz a la historia clínica oficial de DUSAKAWI EPSI?")) {
       setExpedientes(CASOS_INICIALES);
+      localStorage.setItem('dusakawi_expedientes', JSON.stringify(CASOS_INICIALES));
     }
   };
 
