@@ -371,7 +371,7 @@ export const MatrizTable: React.FC<MatrizTableProps> = ({
                     <td>
                       <div 
                         className="caso-link" 
-                        onClick={() => onSeleccionarExpediente(exp, 'auditoria')}
+                        onClick={() => onSeleccionarExpediente(exp, 'documento')}
                       >
                         {exp.codigoCaso}
                       </div>

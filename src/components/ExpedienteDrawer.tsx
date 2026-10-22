@@ -10,7 +10,8 @@ import type { IExpedienteClinico } from '../types/clinical';
 import { 
   obtenerArchivoDeCache, 
   obtenerArchivoDeCacheAsync, 
-  registrarArchivoEnCache 
+  registrarArchivoEnCache,
+  generarPdfHistoriaClinicaBlob
 } from '../services/exportService';
 
 interface ExpedienteDrawerProps {
@@ -105,9 +106,17 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
         }
       }
 
-      // Si no hay archivo PDF físico cargado, no inventamos un PDF artificial:
-      // se muestra directamente la Historia Clínica digitalizada con su contenido real
+      // 4. Si no hay archivo PDF físico cargado en memoria, generar el documento oficial PDF de la historia clínica:
       if (!cancelado) {
+        try {
+          const blobGenerado = generarPdfHistoriaClinicaBlob(expediente);
+          if (blobGenerado) {
+            actualizarPdfUrl(URL.createObjectURL(blobGenerado));
+            return;
+          }
+        } catch (e) {
+          console.warn('Error generando PDF de historia clínica:', e);
+        }
         actualizarPdfUrl(null);
       }
     }

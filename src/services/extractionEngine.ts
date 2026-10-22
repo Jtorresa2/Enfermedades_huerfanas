@@ -1,6 +1,7 @@
 import type { IEnfermedadHuerfana, IAuditoriaFicha, IExpedienteClinico } from '../types/clinical';
 import { PROMPT_MINSALUD_SISTEMA } from '../data/casosEjemplo';
 import { CONOCIMIENTO_GEMA_DUSAKAWI } from '../data/gemaKnowledgeText';
+import { registrarArchivoEnCache } from './exportService';
 
 function homologarCie10(enfermedad: string, codigoActual?: string): string {
   // Si el documento trae un código CIE-10 explícito (ej: D59.5, D595, E75.2, D66, DX: D66, etc.)
@@ -708,6 +709,13 @@ AUDITORÍA MÉDICA DUSAKAWI EPSI:
   const texto = await leerTextoArchivo(archivo);
   onProgreso?.(80, `Auditando reglas de Cero Inventiva...`);
   const res = await procesarDocumentoTexto(archivo.name, texto, cleanApiKey, onProgreso);
+  try {
+    const b64 = await archivoABase64(archivo);
+    res.archivoBase64 = b64;
+    registrarArchivoEnCache(archivo.name, archivo);
+  } catch (e) {
+    console.warn("No se pudo cachear base64 del archivo:", e);
+  }
   onProgreso?.(100, `¡Expediente consolidado!`);
   return res;
 }
