@@ -73,7 +73,7 @@ export const App: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'matriz' | 'extraccion' | 'normativa' | 'integracion'>('matriz');
   const [expedienteSeleccionado, setExpedienteSeleccionado] = useState<IExpedienteClinico | null>(null);
-  const [drawerTabInicial, setDrawerTabInicial] = useState<'auditoria' | 'texto'>('auditoria');
+  const [drawerTabInicial, setDrawerTabInicial] = useState<'auditoria' | 'clinica' | 'texto'>('auditoria');
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
     return localStorage.getItem('dusakawi_gemini_api_key') || (import.meta.env.VITE_GEMINI_API_KEY || '');
@@ -114,9 +114,11 @@ export const App: React.FC = () => {
     localStorage.setItem('dusakawi_gemini_api_key', key);
   };
 
-  const handleExpedientesProcesados = (nuevos: IExpedienteClinico[]) => {
+  const handleExpedientesProcesados = (nuevos: IExpedienteClinico[], navegarAMatriz = false) => {
     setExpedientes(prev => [...nuevos, ...prev]);
-    setActiveTab('matriz');
+    if (navegarAMatriz) {
+      setActiveTab('matriz');
+    }
   };
 
   const handleEliminarExpediente = (id: string) => {
@@ -129,7 +131,7 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleAbrirExpediente = (exp: IExpedienteClinico, tab: 'auditoria' | 'texto' = 'auditoria') => {
+  const handleAbrirExpediente = (exp: IExpedienteClinico, tab: 'auditoria' | 'clinica' | 'texto' = 'auditoria') => {
     setExpedienteSeleccionado(exp);
     setDrawerTabInicial(tab);
   };
@@ -207,6 +209,8 @@ export const App: React.FC = () => {
               apiKey={geminiApiKey}
               geminiApiKey={geminiApiKey}
               onExpedientesProcesados={handleExpedientesProcesados}
+              onVerExpediente={handleAbrirExpediente}
+              onIrAMatriz={() => setActiveTab('matriz')}
               onOpenConfig={() => setConfigModalOpen(true)}
             />
           </div>

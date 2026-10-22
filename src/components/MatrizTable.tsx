@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { 
-  Search, Eye, Trash2, CheckCircle, AlertTriangle, XCircle, 
-  MapPin, UploadCloud, X, RotateCcw, FolderArchive, FileSpreadsheet 
+  Search, Trash2, CheckCircle, AlertTriangle, XCircle, 
+  MapPin, UploadCloud, X, RotateCcw, FolderArchive, FileSpreadsheet,
+  FileText, ShieldCheck 
 } from 'lucide-react';
 import { exportarLoteOrganizadoZip, exportarMatrizExcel } from '../services/exportService';
 import type { IExpedienteClinico, NivelConformidad } from '../types/clinical';
 
 interface MatrizTableProps {
   expedientes: IExpedienteClinico[];
-  onSeleccionarExpediente: (expediente: IExpedienteClinico, tabInicial?: 'auditoria' | 'texto') => void;
+  onSeleccionarExpediente: (expediente: IExpedienteClinico, tabInicial?: 'auditoria' | 'clinica' | 'texto') => void;
   onEliminarExpediente: (id: string) => void;
   onCargarNuevos?: () => void;
 }
@@ -494,18 +495,42 @@ export const MatrizTable: React.FC<MatrizTableProps> = ({
                     </td>
 
                     <td>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.35rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.35rem', flexWrap: 'wrap' }}>
                         <button
                           className="btn btn-secondary"
-                          style={{ padding: '0.4rem 0.6rem', fontSize: '0.78rem' }}
-                          onClick={() => onSeleccionarExpediente(exp, 'auditoria')}
-                          title="Inspeccionar expediente clínico y auditoría"
+                          style={{ 
+                            padding: '0.38rem 0.65rem', 
+                            fontSize: '0.78rem', 
+                            color: '#005A43', 
+                            borderColor: '#A7F3D0', 
+                            background: '#F0FDF8',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontWeight: 600
+                          }}
+                          onClick={() => onSeleccionarExpediente(exp, 'clinica')}
+                          title="Ver historia clínica, diagnóstico, procedimientos y evolución"
                         >
-                          <Eye size={14} /> Auditoría
+                          <FileText size={14} color="#005A43" /> Historia Clínica
                         </button>
                         <button
                           className="btn btn-secondary"
-                          style={{ padding: '0.4rem 0.5rem', color: '#DC2626' }}
+                          style={{ 
+                            padding: '0.38rem 0.65rem', 
+                            fontSize: '0.78rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          onClick={() => onSeleccionarExpediente(exp, 'auditoria')}
+                          title="Inspeccionar dictamen de auditoría y alertas normativas"
+                        >
+                          <ShieldCheck size={14} color="#0284C7" /> Auditoría
+                        </button>
+                        <button
+                          className="btn btn-secondary"
+                          style={{ padding: '0.38rem 0.5rem', color: '#DC2626' }}
                           onClick={() => setExpedienteAEliminar(exp)}
                           title="Eliminar de la sesión actual"
                         >

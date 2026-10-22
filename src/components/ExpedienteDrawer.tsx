@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, CheckCircle2, AlertTriangle, FileText, 
   ShieldCheck, User, Stethoscope, Pill, Activity, 
   Copy, Check, MapPin, Calendar, Building2, 
-  Download, ShieldAlert
+  Download, ShieldAlert, ExternalLink
 } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 import type { IExpedienteClinico } from '../types/clinical';
+import { obtenerArchivoDeCache } from '../services/exportService';
 
 interface ExpedienteDrawerProps {
   expediente: IExpedienteClinico | null;
@@ -31,10 +32,24 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
   const [tabActiva, setTabActiva] = useState<'auditoria' | 'clinica' | 'texto'>(tabInicial);
   const [copiado, setCopiado] = useState(false);
 
+  useEffect(() => {
+    if (tabInicial) {
+      setTabActiva(tabInicial);
+    }
+  }, [tabInicial, expediente?.id]);
+
   if (!expediente) return null;
 
   const pruebasList = toArray(expediente.datos?.pruebas_diagnosticas_realizadas);
   const tratamientosList = toArray(expediente.datos?.tratamiento_actual);
+
+  const archivoCache = obtenerArchivoDeCache(expediente.nombreArchivo);
+
+  const abrirArchivoOriginal = () => {
+    if (!archivoCache) return;
+    const url = URL.createObjectURL(archivoCache);
+    window.open(url, '_blank');
+  };
 
   const copiarDictamen = () => {
     const texto = `========================================================
@@ -750,6 +765,71 @@ DICTAMEN NORMATIVO:
               </div>
 
 
+
+              {/* Lectura de la Historia Clínica y Documento Fuente */}
+              <div style={{
+                background: '#F8FAF9',
+                border: '1px solid #CBD5E1',
+                borderRadius: '14px',
+                padding: '1.25rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FileText size={18} color="#005A43" />
+                    <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                      Transcripción y Evidencia de la Historia Clínica
+                    </h3>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {archivoCache && (
+                      <button
+                        type="button"
+                        onClick={abrirArchivoOriginal}
+                        className="btn btn-secondary"
+                        style={{ 
+                          padding: '0.35rem 0.75rem', 
+                          fontSize: '0.78rem', 
+                          color: '#005A43', 
+                          borderColor: '#A7F3D0', 
+                          background: '#ECFDF5', 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          gap: '5px',
+                          fontWeight: 700 
+                        }}
+                        title="Abrir el archivo original subido (PDF)"
+                      >
+                        <ExternalLink size={14} /> Abrir Archivo Original
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setTabActiva('texto')}
+                      className="btn btn-secondary"
+                      style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}
+                    >
+                      Pantalla Completa de Texto
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{
+                  background: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '10px',
+                  padding: '1rem',
+                  fontSize: '0.82rem',
+                  color: '#334155',
+                  maxHeight: '260px',
+                  overflowY: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  lineHeight: 1.6,
+                  fontFamily: 'inherit'
+                }}>
+                  {expediente.textoOriginal || 'No se cuenta con texto transcrito para este caso.'}
+                </div>
+              </div>
 
             </div>
           )}

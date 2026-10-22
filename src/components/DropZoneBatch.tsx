@@ -1,28 +1,36 @@
 import { registrarArchivoEnCache } from '../services/exportService';
 import React, { useState, useRef } from 'react';
-import { UploadCloud, FolderUp, Sparkles, Loader2, FileText, FileArchive } from 'lucide-react';
+import { 
+  UploadCloud, FolderUp, Sparkles, Loader2, FileText, FileArchive, 
+  CheckCircle2, ShieldCheck, Table 
+} from 'lucide-react';
 import JSZip from 'jszip';
 import type { IExpedienteClinico } from '../types/clinical';
 import { procesarDocumentoArchivo } from '../services/extractionEngine';
 import { CASOS_INICIALES } from '../data/casosEjemplo';
 
 interface DropZoneBatchProps {
-  onExpedientesProcesados: (nuevos: IExpedienteClinico[]) => void;
+  onExpedientesProcesados: (nuevos: IExpedienteClinico[], navegarAMatriz?: boolean) => void;
   geminiApiKey?: string;
   apiKey?: string;
   onOpenConfig?: () => void;
+  onVerExpediente?: (expediente: IExpedienteClinico, tabInicial?: 'auditoria' | 'clinica' | 'texto') => void;
+  onIrAMatriz?: () => void;
 }
 
 export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
   onExpedientesProcesados,
   geminiApiKey,
-  apiKey
+  apiKey,
+  onVerExpediente,
+  onIrAMatriz
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [procesando, setProcesando] = useState(false);
   const [progresoTexto, setProgresoTexto] = useState('Analizando historia clínica...');
   const [progresoPorcentaje, setProgresoPorcentaje] = useState(15);
   const [archivoActualNombre, setArchivoActualNombre] = useState('');
+  const [completadoReciente, setCompletadoReciente] = useState<IExpedienteClinico[] | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -139,14 +147,18 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
     }
 
     setProgresoPorcentaje(100);
-    setProgresoTexto(`¡Auditoría masiva completada! ${nuevosExpedientes.length} historias registradas.`);
+    setProgresoTexto(`¡Auditoría completada! ${nuevosExpedientes.length} ${nuevosExpedientes.length === 1 ? 'historia registrada' : 'historias registradas'}.`);
+    
+    // Guardar los expedientes en el estado global
+    onExpedientesProcesados(nuevosExpedientes, false);
+
     setTimeout(() => {
-      onExpedientesProcesados(nuevosExpedientes);
       setProcesando(false);
       setProgresoTexto('');
       setProgresoPorcentaje(0);
       setArchivoActualNombre('');
-    }, 700);
+      setCompletadoReciente(nuevosExpedientes);
+    }, 400);
   };
 
   const cargarCasoDemo = (casoIndex: number) => {
@@ -157,7 +169,8 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
         codigoCaso: `DEMO-2026-${Math.floor(1000 + Math.random() * 9000)}`,
         fechaProcesamiento: new Date().toISOString()
       };
-      onExpedientesProcesados([nuevo]);
+      onExpedientesProcesados([nuevo], false);
+      setCompletadoReciente([nuevo]);
     }
   };
 
@@ -247,6 +260,160 @@ export const DropZoneBatch: React.FC<DropZoneBatchProps> = ({
             <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: progresoPorcentaje >= 100 ? '#047857' : '#94A3B8', fontWeight: 600 }}>
               {progresoPorcentaje >= 100 ? '✓' : '○'} Consolidación
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* Tarjeta de Éxito Inmediato con Acceso a Historia Clínica y Auditoría */}
+      {completadoReciente && completadoReciente.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #F0FDF8 0%, #FFFFFF 100%)',
+          border: '2px solid #005A43',
+          borderRadius: '16px',
+          padding: '1.5rem',
+          marginBottom: '1.75rem',
+          boxShadow: '0 12px 28px -6px rgba(0, 90, 67, 0.16)',
+          animation: 'fadeIn 0.25s ease-out'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ 
+                background: '#005A43', 
+                color: 'white', 
+                borderRadius: '50%', 
+                width: '38px', 
+                height: '38px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                flexShrink: 0 
+              }}>
+                <CheckCircle2 size={24} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#005A43', margin: 0 }}>
+                  ¡{completadoReciente.length === 1 ? 'Historia Clínica Procesada con Éxito' : `${completadoReciente.length} Historias Clínicas Procesadas`}!
+                </h3>
+                <span style={{ fontSize: '0.8rem', color: '#475569' }}>
+                  Auditoría clínica y extracción de variables completadas bajo la regla de Cero Inventiva.
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  onIrAMatriz?.();
+                }}
+                className="btn btn-primary"
+                style={{ fontSize: '0.82rem', gap: '6px' }}
+              >
+                <Table size={15} />
+                <span>Ir a la Matriz General</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCompletadoReciente(null)}
+                className="btn btn-secondary"
+                style={{ fontSize: '0.82rem' }}
+              >
+                Cargar Más Documentos
+              </button>
+            </div>
+          </div>
+
+          {/* Listado de expedientes procesados con botones directos */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {completadoReciente.map((exp, idx) => (
+              <div key={idx} style={{
+                background: '#FFFFFF',
+                border: '1px solid #CBD5E1',
+                borderRadius: '12px',
+                padding: '1rem 1.25rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '12px',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    background: '#ECFDF5',
+                    color: '#005A43',
+                    fontWeight: 800,
+                    fontSize: '0.82rem',
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    fontFamily: 'monospace',
+                    border: '1px solid #A7F3D0'
+                  }}>
+                    {(exp.datos?.numero_historia_clinica || exp.datos?.identificacion_paciente || 'HC').replace(/\D/g, '') || 'HC'}
+                  </div>
+
+                  <div>
+                    <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.94rem' }}>
+                      {exp.datos?.paciente_nombre && exp.datos.paciente_nombre !== 'No especificado en el documento'
+                        ? exp.datos.paciente_nombre
+                        : exp.pacienteAnonimizado}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748B', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, color: '#005A43' }}>
+                        {exp.datos?.enfermedad}
+                      </span>
+                      {exp.datos?.codigo_cie10 && (
+                        <span style={{ background: '#005A43', color: 'white', padding: '1px 6px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700 }}>
+                          CIE-10: {exp.datos.codigo_cie10}
+                        </span>
+                      )}
+                      <span>• {exp.departamentoSede} ({exp.comunidadIndigena})</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => onVerExpediente?.(exp, 'clinica')}
+                    className="btn btn-secondary"
+                    style={{
+                      padding: '0.45rem 0.9rem',
+                      fontSize: '0.82rem',
+                      color: '#005A43',
+                      borderColor: '#A7F3D0',
+                      background: '#F0FDF8',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                    title="Ver ficha clínica, CUPS, tratamientos y texto original"
+                  >
+                    <FileText size={15} color="#005A43" />
+                    <span>Ver Historia Clínica</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onVerExpediente?.(exp, 'auditoria')}
+                    className="btn btn-secondary"
+                    style={{
+                      padding: '0.45rem 0.9rem',
+                      fontSize: '0.82rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                    title="Ver dictamen de auditoría, normas y alertas"
+                  >
+                    <ShieldCheck size={15} color="#0284C7" />
+                    <span>Ver Auditoría</span>
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

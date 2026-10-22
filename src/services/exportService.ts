@@ -116,6 +116,10 @@ export function registrarArchivoEnCache(nombreArchivo: string, archivo: Blob | F
   cacheArchivosOriginales.set(nombreArchivo, archivo);
 }
 
+export function obtenerArchivoDeCache(nombreArchivo: string): (Blob | File) | undefined {
+  return cacheArchivosOriginales.get(nombreArchivo);
+}
+
 /**
  * Exporta el lote con una CARPETA INICIAL y dentro de ella:
  * - Una subcarpeta por paciente (agrupando todas sus historias si tiene varias).
