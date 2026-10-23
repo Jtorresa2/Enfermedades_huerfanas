@@ -39,7 +39,7 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="navbar">
       {/* Lado Izquierdo: Identidad y Marca Institucional */}
       <div className="brand-wrapper">
-        <div className="brand-logo-container">
+        <div className="brand-logo-container" title="DUSAKAWI EPSI - Entidad Promotora de Salud Indígena">
           <img
             src={logoImg}
             alt="Logo DUSAKAWI EPSI"
@@ -47,86 +47,57 @@ export const Header: React.FC<HeaderProps> = ({
           />
         </div>
         <div className="brand-titles">
-          <h1>
-            DUSAKAWI EPSI
-          </h1>
-          <p>
-            Módulo Clínico de Extracción y Auditoría de Enfermedades Huérfanas
-            <span style={{ marginLeft: '8px', background: 'rgba(255,255,255,0.2)', padding: '1px 6px', borderRadius: '10px', fontSize: '0.75rem' }}>
-              {totalCasos} expedientes cargados
+          <div className="brand-title-row">
+            <h1>DUSAKAWI EPSI</h1>
+            <span className="brand-badge-intercultural">Salud Propia e Intercultural</span>
+            <span className="brand-badge-counter">{totalCasos} expedientes</span>
+          </div>
+          <div className="brand-subtitle-row">
+            <span className="brand-subtext">Módulo Clínico • Auditoría MinSalud & SIVIGILA</span>
+            <span className="brand-status-chip">
+              <span className="status-dot-pulse" />
+              💎 Gema de Conocimiento Conectada (5 Fichas)
             </span>
-            <span style={{ 
-              marginLeft: '8px', 
-              background: 'rgba(52, 211, 153, 0.25)', 
-              border: '1px solid rgba(52, 211, 153, 0.5)', 
-              color: '#A7F3D0', 
-              padding: '2px 8px', 
-              borderRadius: '10px', 
-              fontSize: '0.74rem', 
-              fontWeight: 700, 
-              display: 'inline-flex', 
-              alignItems: 'center', 
-              gap: '4px' 
-            }}>
-              💎 Gema DUSAKAWI Conectada (5 Fichas)
-            </span>
-          </p>
+          </div>
         </div>
       </div>
 
-      {/* Lado Derecho: Acciones y Usuario en toda la esquina */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginLeft: 'auto' }}>
+      {/* Lado Derecho: Acciones y Usuario en la esquina */}
+      <div className="navbar-right-actions">
         {/* Botón de restablecer */}
-        <div className="nav-actions">
-          <button
-            className="btn btn-secondary"
-            onClick={onResetearCasos}
-            title="Recargar expedientes oficiales de prueba"
-            style={{ background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
-          >
-            <RefreshCw size={15} />
-            <span>Restablecer</span>
-          </button>
-        </div>
+        <button
+          className="btn-header-secondary"
+          onClick={onResetearCasos}
+          title="Recargar expedientes oficiales de prueba de DUSAKAWI"
+        >
+          <RefreshCw size={14} className="icon-rotate-on-hover" />
+          <span>Restablecer</span>
+        </button>
 
-        {/* Separador vertical sutil */}
-        {usuario && (
-          <div style={{ width: '1px', height: '28px', background: 'rgba(255, 255, 255, 0.25)' }} />
-        )}
+        {/* Separador vertical */}
+        {usuario && <div className="header-divider" />}
 
-        {/* Menú de Usuario Administrador en TODA LA ESQUINA */}
+        {/* Menú de Usuario Administrador */}
         {usuario && (
-          <div className="user-dropdown-container" ref={dropdownRef} style={{ position: 'relative' }}>
-            <div
-              className="user-profile-badge"
+          <div className="user-dropdown-container" ref={dropdownRef}>
+            <button
+              type="button"
+              className={`user-profile-btn ${menuAbierto ? 'active' : ''}`}
               onClick={() => setMenuAbierto(!menuAbierto)}
-              style={{
-                cursor: 'pointer',
-                userSelect: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                marginRight: 0,
-                background: menuAbierto ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.16)',
-                transition: 'all 0.2s ease'
-              }}
               title="Opciones de Administrador"
             >
               <div className="user-avatar-circle">
-                <User size={15} />
+                <User size={14} />
               </div>
-              <span className="user-name" style={{ fontSize: '0.82rem', fontWeight: 700 }}>
-                Administrador
-              </span>
+              <div className="user-label-group">
+                <span className="user-name">Administrador</span>
+                <span className="user-role-label">Auditoría Médica</span>
+              </div>
               <ChevronDown
                 size={14}
-                style={{
-                  transition: 'transform 0.2s ease',
-                  transform: menuAbierto ? 'rotate(180deg)' : 'rotate(0deg)',
-                  opacity: 0.9
-                }}
+                className={`chevron-icon ${menuAbierto ? 'rotated' : ''}`}
               />
-            </div>
+            </button>
 
             {menuAbierto && (
               <div

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { 
-  Search, Trash2, CheckCircle, AlertTriangle, XCircle, 
+  Search, Trash2, AlertTriangle, XCircle, 
   MapPin, UploadCloud, X, RotateCcw, FolderArchive, FileSpreadsheet,
-  FileText 
+  FileText, CheckCircle2, ShieldAlert, Layers
 } from 'lucide-react';
 import { exportarLoteOrganizadoZip, exportarMatrizExcel } from '../services/exportService';
 import type { IExpedienteClinico, NivelConformidad } from '../types/clinical';
@@ -28,6 +28,8 @@ export const MatrizTable: React.FC<MatrizTableProps> = ({
   const conformesCount = expedientes.filter(e => e.auditoria.estado === 'CONFORME').length;
   const incompletosCount = expedientes.filter(e => e.auditoria.estado === 'INCOMPLETO').length;
   const criticosCount = expedientes.filter(e => e.auditoria.estado === 'CRITICO').length;
+  const totalCasos = expedientes.length;
+  const porcentajeConformidad = totalCasos > 0 ? Math.round((conformesCount / totalCasos) * 100) : 0;
 
   const expedientesFiltrados = expedientes.filter(exp => {
     const coincideTexto = 
@@ -58,19 +60,19 @@ export const MatrizTable: React.FC<MatrizTableProps> = ({
       case 'CONFORME':
         return (
           <span className="status-badge CONFORME">
-            <CheckCircle size={14} /> CONFORME
+            <CheckCircle2 size={13} /> CONFORME
           </span>
         );
       case 'INCOMPLETO':
         return (
           <span className="status-badge INCOMPLETO">
-            <AlertTriangle size={14} /> INCOMPLETO
+            <AlertTriangle size={13} /> INCOMPLETO
           </span>
         );
       case 'CRITICO':
         return (
           <span className="status-badge CRITICO">
-            <XCircle size={14} /> CRÍTICO
+            <XCircle size={13} /> CRÍTICO
           </span>
         );
     }
@@ -84,78 +86,137 @@ export const MatrizTable: React.FC<MatrizTableProps> = ({
 
   return (
     <div className="table-section">
-      {/* Barra de Filtros y Control Organizada */}
-      <div style={{
-        background: 'white',
-        border: '1px solid var(--border-color)',
-        borderRadius: '14px',
-        padding: '1.1rem 1.25rem',
-        marginBottom: '1.25rem',
-        boxShadow: '0 2px 6px -1px rgba(0, 0, 0, 0.05)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.85rem'
-      }}>
-        {/* Fila 1: Búsqueda y Botón Principal */}
-        <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: '1 1 320px' }}>
-            <Search 
-              size={17} 
-              style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} 
+      {/* ====================================================================
+          TARJETAS KPI EJECUTIVAS (MÉTRICAS CLÍNICAS EN TIEMPO REAL)
+          ==================================================================== */}
+      <div className="kpi-dashboard-grid">
+        {/* KPI 1: Total Expedientes */}
+        <div 
+          className={`kpi-card ${filtroEstado === 'TODOS' ? 'active-filter' : ''}`}
+          onClick={() => setFiltroEstado('TODOS')}
+          title="Click para ver todos los expedientes"
+        >
+          <div className="kpi-card-header">
+            <span className="kpi-label">Total Expedientes</span>
+            <div className="kpi-icon-badge kpi-icon-primary">
+              <Layers size={18} />
+            </div>
+          </div>
+          <div className="kpi-value-row">
+            <span className="kpi-value">{totalCasos}</span>
+            <span className="kpi-badge neutral">100% cargados</span>
+          </div>
+          <div className="kpi-subtext">
+            <span>Auditoría DUSAKAWI EPSI</span>
+            {filtroEstado === 'TODOS' && <span className="kpi-active-indicator">● Activo</span>}
+          </div>
+        </div>
+
+        {/* KPI 2: Conformes MinSalud */}
+        <div 
+          className={`kpi-card ${filtroEstado === 'CONFORME' ? 'active-filter' : ''}`}
+          onClick={() => setFiltroEstado('CONFORME')}
+          title="Click para filtrar únicamente casos Conformes"
+        >
+          <div className="kpi-card-header">
+            <span className="kpi-label">Conformes MinSalud</span>
+            <div className="kpi-icon-badge kpi-icon-success">
+              <CheckCircle2 size={18} />
+            </div>
+          </div>
+          <div className="kpi-value-row">
+            <span className="kpi-value kpi-success">{conformesCount}</span>
+            <span className="kpi-badge success">{porcentajeConformidad}% cumplimiento</span>
+          </div>
+          <div className="kpi-progress-bar">
+            <div 
+              className="kpi-progress-fill success" 
+              style={{ width: `${porcentajeConformidad}%` }} 
             />
+          </div>
+          <div className="kpi-subtext">
+            <span>Cumplen Gold Standard & Especialidad</span>
+            {filtroEstado === 'CONFORME' && <span className="kpi-active-indicator">● Activo</span>}
+          </div>
+        </div>
+
+        {/* KPI 3: Incompletos / Requieren Soporte */}
+        <div 
+          className={`kpi-card ${filtroEstado === 'INCOMPLETO' ? 'active-filter' : ''}`}
+          onClick={() => setFiltroEstado('INCOMPLETO')}
+          title="Click para filtrar expedientes Incompletos"
+        >
+          <div className="kpi-card-header">
+            <span className="kpi-label">Incompletos / Pendientes</span>
+            <div className="kpi-icon-badge kpi-icon-warning">
+              <AlertTriangle size={18} />
+            </div>
+          </div>
+          <div className="kpi-value-row">
+            <span className="kpi-value kpi-warning">{incompletosCount}</span>
+            <span className="kpi-badge warning">Requiere Soporte</span>
+          </div>
+          <div className="kpi-subtext">
+            <span>Falta CUPS confirmatorio o médico</span>
+            {filtroEstado === 'INCOMPLETO' && <span className="kpi-active-indicator">● Activo</span>}
+          </div>
+        </div>
+
+        {/* KPI 4: Casos Críticos / SIVIGILA */}
+        <div 
+          className={`kpi-card ${filtroEstado === 'CRITICO' ? 'active-filter' : ''}`}
+          onClick={() => setFiltroEstado('CRITICO')}
+          title="Click para filtrar alertas críticas"
+        >
+          <div className="kpi-card-header">
+            <span className="kpi-label">Alertas Críticas</span>
+            <div className="kpi-icon-badge kpi-icon-danger">
+              <ShieldAlert size={18} />
+            </div>
+          </div>
+          <div className="kpi-value-row">
+            <span className="kpi-value kpi-danger">{criticosCount}</span>
+            <span className="kpi-badge danger">Prioridad SIVIGILA</span>
+          </div>
+          <div className="kpi-subtext">
+            <span>Revisión en Mesa Técnica DUSAKAWI</span>
+            {filtroEstado === 'CRITICO' && <span className="kpi-active-indicator">● Activo</span>}
+          </div>
+        </div>
+      </div>
+
+      {/* ====================================================================
+          BARRA DE CONTROL, FILTROS Y ACCIONES EXECUTIVAS
+          ==================================================================== */}
+      <div className="controls-panel-card">
+        {/* Fila 1: Búsqueda y Botones de Acción */}
+        <div className="controls-row-primary">
+          <div className="search-input-wrapper">
+            <Search size={18} className="search-input-icon" />
             <input
               type="text"
-              placeholder="Buscar por código, enfermedad, CIE-10, paciente, comunidad o médico tratante..."
+              placeholder="Buscar por código, N° historia, paciente, CIE-10, enfermedad o especialista..."
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.65rem 2.2rem 0.65rem 2.4rem',
-                borderRadius: '8px',
-                border: '1px solid #CBD5E1',
-                fontSize: '0.88rem',
-                outline: 'none',
-                transition: 'border-color 0.2s',
-                fontFamily: 'inherit'
-              }}
-              onFocus={(e) => e.target.style.borderColor = 'var(--primary-dusakawi)'}
-              onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
+              className="search-input-field"
             />
             {busqueda && (
               <button
+                type="button"
                 onClick={() => setBusqueda('')}
-                style={{
-                  position: 'absolute',
-                  right: '0.75rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#94A3B8',
-                  padding: 0
-                }}
-                title="Borrar búsqueda"
+                className="search-clear-btn"
+                title="Limpiar búsqueda"
               >
                 <X size={15} />
               </button>
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div className="controls-actions-group">
             <button
-              className="btn btn-secondary"
+              type="button"
+              className="btn btn-export-zip"
               onClick={() => exportarLoteOrganizadoZip(expedientesFiltrados)}
-              style={{ 
-                whiteSpace: 'nowrap',
-                background: '#F0FDF4',
-                borderColor: '#BBF7D0',
-                color: '#006B54',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
               title="Descargar paquete con carpeta inicial y subcarpetas por paciente"
             >
               <FolderArchive size={16} />
@@ -163,15 +224,10 @@ export const MatrizTable: React.FC<MatrizTableProps> = ({
             </button>
 
             <button
-              className="btn btn-secondary"
+              type="button"
+              className="btn btn-export-excel"
               onClick={() => exportarMatrizExcel(expedientesFiltrados)}
-              style={{ 
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-              title="Descargar matriz en Excel"
+              title="Descargar matriz consolidada en Excel"
             >
               <FileSpreadsheet size={16} />
               <span>Exportar Excel</span>
@@ -179,9 +235,10 @@ export const MatrizTable: React.FC<MatrizTableProps> = ({
 
             {onCargarNuevos && (
               <button
-                className="btn btn-primary"
+                type="button"
+                className="btn btn-primary-cta"
                 onClick={onCargarNuevos}
-                style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
+                title="Subir nuevas historias clínicas en PDF para extracción automática"
               >
                 <UploadCloud size={16} />
                 <span>Cargar Expedientes PDF</span>
@@ -190,116 +247,56 @@ export const MatrizTable: React.FC<MatrizTableProps> = ({
           </div>
         </div>
 
-        {/* Fila 2: Filtros por Estado (Pills), Filtro por Sede y Contador */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          flexWrap: 'wrap', 
-          gap: '0.75rem',
-          paddingTop: '0.65rem',
-          borderTop: '1px solid #F1F5F9'
-        }}>
-          {/* Pills de Estado */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748B', marginRight: '4px', textTransform: 'uppercase' }}>
-              Estado:
-            </span>
+        {/* Fila 2: Segmented Pills de Estado, Selector de Sede y Conteo */}
+        <div className="controls-row-secondary">
+          {/* Pills de Estado con contadores */}
+          <div className="status-pills-cluster">
+            <span className="filter-cluster-label">Filtrar por:</span>
 
             <button
+              type="button"
               onClick={() => setFiltroEstado('TODOS')}
-              style={{
-                padding: '0.35rem 0.75rem',
-                borderRadius: '20px',
-                border: '1px solid',
-                borderColor: filtroEstado === 'TODOS' ? '#005A43' : '#E2E8F0',
-                background: filtroEstado === 'TODOS' ? '#005A43' : '#F8FAFC',
-                color: filtroEstado === 'TODOS' ? 'white' : '#475569',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s'
-              }}
+              className={`filter-pill ${filtroEstado === 'TODOS' ? 'active' : ''}`}
             >
-              Todos ({expedientes.length})
+              Todos <span className="pill-badge">{expedientes.length}</span>
             </button>
 
             <button
+              type="button"
               onClick={() => setFiltroEstado('CONFORME')}
-              style={{
-                padding: '0.35rem 0.75rem',
-                borderRadius: '20px',
-                border: '1px solid',
-                borderColor: filtroEstado === 'CONFORME' ? '#059669' : '#E2E8F0',
-                background: filtroEstado === 'CONFORME' ? '#ECFDF5' : '#F8FAFC',
-                color: filtroEstado === 'CONFORME' ? '#065F46' : '#475569',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s'
-              }}
+              className={`filter-pill pill-conforme ${filtroEstado === 'CONFORME' ? 'active' : ''}`}
             >
-              <span style={{ color: '#059669', marginRight: '4px' }}>●</span>
-              Conformes ({conformesCount})
+              <span className="dot dot-success" />
+              Conformes <span className="pill-badge">{conformesCount}</span>
             </button>
 
             <button
+              type="button"
               onClick={() => setFiltroEstado('INCOMPLETO')}
-              style={{
-                padding: '0.35rem 0.75rem',
-                borderRadius: '20px',
-                border: '1px solid',
-                borderColor: filtroEstado === 'INCOMPLETO' ? '#D97706' : '#E2E8F0',
-                background: filtroEstado === 'INCOMPLETO' ? '#FFFBEB' : '#F8FAFC',
-                color: filtroEstado === 'INCOMPLETO' ? '#92400E' : '#475569',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s'
-              }}
+              className={`filter-pill pill-incompleto ${filtroEstado === 'INCOMPLETO' ? 'active' : ''}`}
             >
-              <span style={{ color: '#D97706', marginRight: '4px' }}>●</span>
-              Incompletos ({incompletosCount})
+              <span className="dot dot-warning" />
+              Incompletos <span className="pill-badge">{incompletosCount}</span>
             </button>
 
             <button
+              type="button"
               onClick={() => setFiltroEstado('CRITICO')}
-              style={{
-                padding: '0.35rem 0.75rem',
-                borderRadius: '20px',
-                border: '1px solid',
-                borderColor: filtroEstado === 'CRITICO' ? '#DC2626' : '#E2E8F0',
-                background: filtroEstado === 'CRITICO' ? '#FEF2F2' : '#F8FAFC',
-                color: filtroEstado === 'CRITICO' ? '#991B1B' : '#475569',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s'
-              }}
+              className={`filter-pill pill-critico ${filtroEstado === 'CRITICO' ? 'active' : ''}`}
             >
-              <span style={{ color: '#DC2626', marginRight: '4px' }}>●</span>
-              Críticos ({criticosCount})
+              <span className="dot dot-danger" />
+              Críticos <span className="pill-badge">{criticosCount}</span>
             </button>
           </div>
 
           {/* Sede y Contador */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <MapPin size={15} color="#64748B" />
+          <div className="location-filter-cluster">
+            <div className="select-sede-wrapper">
+              <MapPin size={15} className="select-sede-icon" />
               <select
                 value={filtroSede}
                 onChange={(e) => setFiltroSede(e.target.value)}
-                style={{
-                  padding: '0.4rem 0.75rem',
-                  borderRadius: '8px',
-                  border: '1px solid #CBD5E1',
-                  background: 'white',
-                  fontSize: '0.82rem',
-                  fontWeight: 500,
-                  color: '#334155',
-                  outline: 'none',
-                  cursor: 'pointer'
-                }}
+                className="select-sede-dropdown"
               >
                 <option value="TODAS">Todas las Sedes</option>
                 <option value="Cesar">Sede Cesar</option>
@@ -310,30 +307,19 @@ export const MatrizTable: React.FC<MatrizTableProps> = ({
 
             {hayFiltrosActivos && (
               <button
+                type="button"
                 onClick={limpiarFiltros}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '0.38rem 0.65rem',
-                  borderRadius: '8px',
-                  border: '1px dashed #CBD5E1',
-                  background: 'white',
-                  color: '#64748B',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-                title="Restablecer filtros"
+                className="btn-clear-filters"
+                title="Restablecer todos los filtros"
               >
-                <RotateCcw size={12} />
-                <span>Limpiar</span>
+                <RotateCcw size={13} />
+                <span>Limpiar filtros</span>
               </button>
             )}
 
-            <span style={{ fontSize: '0.82rem', color: '#64748B', marginLeft: '4px' }}>
+            <div className="results-counter-chip">
               <strong>{expedientesFiltrados.length}</strong> de {expedientes.length} expedientes
-            </span>
+            </div>
           </div>
         </div>
       </div>

@@ -106,7 +106,7 @@ export const App: React.FC = () => {
       try {
         // Reducir tamaño y remover binarios base64 pesados de localStorage (IndexedDB ya preserva el archivo original)
         const compactos = expedientes.map(exp => {
-          const { archivoBase64, ...resto } = exp;
+          const { archivoBase64: _archivoBase64, ...resto } = exp;
           return {
             ...resto,
             textoOriginal: (resto.textoOriginal || '').substring(0, 1500)
