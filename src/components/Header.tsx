@@ -49,15 +49,11 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="brand-titles">
           <div className="brand-title-row">
             <h1>DUSAKAWI EPSI</h1>
-            <span className="brand-badge-intercultural">Salud Propia e Intercultural</span>
-            <span className="brand-badge-counter">{totalCasos} expedientes</span>
+
           </div>
           <div className="brand-subtitle-row">
             <span className="brand-subtext">Módulo Clínico • Auditoría MinSalud & SIVIGILA</span>
-            <span className="brand-status-chip">
-              <span className="status-dot-pulse" />
-              💎 Gema de Conocimiento Conectada (5 Fichas)
-            </span>
+
           </div>
         </div>
       </div>
