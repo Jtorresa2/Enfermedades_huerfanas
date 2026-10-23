@@ -69,8 +69,10 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
         return;
       }
 
-      // 1. Intentar desde memoria inmediata
-      const archivoMem = obtenerArchivoDeCache(expediente.nombreArchivo) || obtenerArchivoDeCache(expediente.id);
+      // 1. Intentar desde memoria inmediata por ID único primero
+      const archivoMem = obtenerArchivoDeCache(expediente.id) ||
+                         obtenerArchivoDeCache(expediente.codigoCaso) ||
+                         obtenerArchivoDeCache(expediente.nombreArchivo);
       if (archivoMem) {
         const blobPdf = archivoMem.type === 'application/pdf'
           ? archivoMem
@@ -79,8 +81,10 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
         return;
       }
 
-      // 2. Intentar desde IndexedDB
-      const archivoIdb = (await obtenerArchivoDeCacheAsync(expediente.nombreArchivo)) || (await obtenerArchivoDeCacheAsync(expediente.id));
+      // 2. Intentar desde IndexedDB por ID único primero
+      const archivoIdb = (await obtenerArchivoDeCacheAsync(expediente.id)) ||
+                         (await obtenerArchivoDeCacheAsync(expediente.codigoCaso)) ||
+                         (await obtenerArchivoDeCacheAsync(expediente.nombreArchivo));
       if (archivoIdb && !cancelado) {
         const blobPdf = archivoIdb.type === 'application/pdf'
           ? archivoIdb
@@ -89,8 +93,14 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
         return;
       }
 
-      // 3. Si el expediente tiene archivoBase64 guardado de un PDF real
-      if (expediente.archivoBase64 && !cancelado) {
+      const esCasoDemoOficial = expediente.id === 'EXP-2026-836' && expediente.codigoCaso === 'DU-AUD-836';
+      const esBase64Andres = Boolean(
+        expediente.archivoBase64 &&
+        expediente.archivoBase64.startsWith(REAL_ANDRES_GIL_PDF_BASE64.substring(0, 50))
+      );
+
+      // 3. Si el expediente tiene archivoBase64 guardado de su archivo real
+      if (expediente.archivoBase64 && (!esBase64Andres || esCasoDemoOficial) && !cancelado) {
         try {
           const cleanB64 = expediente.archivoBase64.replace(/^data:application\/pdf;base64,/, '').replace(/^data:.*?;base64,/, '').trim();
           const raw = atob(cleanB64);
@@ -100,8 +110,8 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
             uInt8Array[i] = raw.charCodeAt(i);
           }
           const blob = new Blob([uInt8Array], { type: 'application/pdf' });
-          registrarArchivoEnCache(expediente.nombreArchivo, blob);
           registrarArchivoEnCache(expediente.id, blob);
+          registrarArchivoEnCache(expediente.nombreArchivo, blob);
           actualizarPdfUrl(URL.createObjectURL(blob));
           return;
         } catch (e) {
@@ -109,12 +119,8 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
         }
       }
 
-      // 4. Caso oficial Andres Gil Gil (HPN)
-      const esAndres = (expediente.nombreArchivo || '').toLowerCase().includes('andres') ||
-                       (expediente.pacienteAnonimizado || '').toLowerCase().includes('andres') ||
-                       expediente.id === 'EXP-2026-836' ||
-                       expediente.codigoCaso === 'DU-AUD-836';
-      if (esAndres && !cancelado) {
+      // 4. Caso oficial precargado Andres Gil Gil (EXP-2026-836) ÚNICAMENTE
+      if (esCasoDemoOficial && !cancelado) {
         try {
           const raw = atob(REAL_ANDRES_GIL_PDF_BASE64);
           const rawLength = raw.length;
@@ -123,8 +129,8 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
             uInt8Array[i] = raw.charCodeAt(i);
           }
           const blob = new Blob([uInt8Array], { type: 'application/pdf' });
-          registrarArchivoEnCache(expediente.nombreArchivo, blob);
           registrarArchivoEnCache(expediente.id, blob);
+          registrarArchivoEnCache(expediente.nombreArchivo, blob);
           actualizarPdfUrl(URL.createObjectURL(blob));
           return;
         } catch (e) {
@@ -135,8 +141,8 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
           const resp = await fetch('/documentos/ANDRES_GIL_GIL_HCL_DUSAKAWI_IPS_CONTROL_HEMATOLOGIA_06_08_2026.pdf');
           if (resp.ok) {
             const blob = await resp.blob();
-            registrarArchivoEnCache(expediente.nombreArchivo, blob);
             registrarArchivoEnCache(expediente.id, blob);
+            registrarArchivoEnCache(expediente.nombreArchivo, blob);
             actualizarPdfUrl(URL.createObjectURL(blob));
             return;
           }
@@ -165,7 +171,7 @@ export const ExpedienteDrawer: React.FC<ExpedienteDrawerProps> = ({
     return () => {
       cancelado = true;
     };
-  }, [expediente?.id, expediente?.nombreArchivo, expediente?.archivoBase64]);
+  }, [expediente?.id, expediente?.codigoCaso, expediente?.nombreArchivo, expediente?.archivoBase64]);
 
   useEffect(() => {
     return () => {
@@ -349,7 +355,7 @@ DICTAMEN NORMATIVO:
                   <User size={13} color="#A7F3D0" />
                   <strong>{expediente.datos?.paciente_nombre || expediente.pacienteAnonimizado}</strong>
                   <span style={{ background: 'rgba(255,255,255,0.25)', padding: '2px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 800, fontFamily: 'monospace' }}>
-                    H.C. {(expediente.datos?.numero_historia_clinica || expediente.datos?.identificacion_paciente || '1082836713').replace(/\D/g, '')}
+                    H.C. {((expediente.datos?.numero_historia_clinica || expediente.datos?.identificacion_paciente || '').replace(/\D/g, '') || expediente.codigoCaso)}
                   </span>
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -516,7 +522,7 @@ DICTAMEN NORMATIVO:
                       {expediente.nombreArchivo}
                     </div>
                     <div style={{ fontSize: '0.78rem', color: '#64748B', display: 'flex', gap: '8px', marginTop: '2px' }}>
-                      <span>Folio / H.C. {(expediente.datos?.numero_historia_clinica || expediente.datos?.identificacion_paciente || '1082836713').replace(/\D/g, '')}</span>
+                      <span>Folio / H.C. {((expediente.datos?.numero_historia_clinica || expediente.datos?.identificacion_paciente || '').replace(/\D/g, '') || expediente.codigoCaso)}</span>
                       <span>•</span>
                       <span>{expediente.tamanoKb || 1} KB</span>
                     </div>
@@ -710,7 +716,7 @@ DICTAMEN NORMATIVO:
                     </div>
 
                     <div style={{ textAlign: 'right', fontSize: '0.8rem', color: '#475569' }}>
-                      <div><strong>N° Historia Clínica:</strong> {(expediente.datos?.numero_historia_clinica || expediente.datos?.identificacion_paciente || '1082836713').replace(/\D/g, '')}</div>
+                      <div><strong>N° Historia Clínica:</strong> {((expediente.datos?.numero_historia_clinica || expediente.datos?.identificacion_paciente || '').replace(/\D/g, '') || expediente.codigoCaso)}</div>
                       <div><strong>Fecha de Atención:</strong> {expediente.datos?.fecha_diagnostico || expediente.fechaProcesamiento}</div>
                     </div>
                   </div>
@@ -1040,7 +1046,7 @@ DICTAMEN NORMATIVO:
                       N° Historia Clínica / Folio
                     </span>
                     <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#006B54', marginTop: '2px' }}>
-                      {(expediente.datos?.numero_historia_clinica || expediente.datos?.identificacion_paciente || '1082836713').replace(/\D/g, '')}
+                      {((expediente.datos?.numero_historia_clinica || expediente.datos?.identificacion_paciente || '').replace(/\D/g, '') || expediente.codigoCaso)}
                     </div>
                   </div>
 

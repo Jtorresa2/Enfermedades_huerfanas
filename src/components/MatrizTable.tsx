@@ -394,7 +394,7 @@ export const MatrizTable: React.FC<MatrizTableProps> = ({
                         border: '1px solid #CEEAD6',
                         letterSpacing: '0.02em'
                       }}>
-                        {(exp.datos?.numero_historia_clinica || exp.datos?.identificacion_paciente || '1082836713').replace(/\D/g, '')}
+                        {((exp.datos?.numero_historia_clinica || exp.datos?.identificacion_paciente || '').replace(/\D/g, '') || exp.codigoCaso)}
                       </div>
                     </td>
 

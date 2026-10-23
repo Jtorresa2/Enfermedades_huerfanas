@@ -55,9 +55,8 @@ export const App: React.FC = () => {
         const parsed = parsedRaw.filter(exp => !esCasoDummy(exp));
         if (parsed.length > 0) {
           return parsed.map(exp => {
-            const enf = (exp.datos?.enfermedad || '').toLowerCase();
-            const esAndres = enf.includes('paroxistica') || enf.includes('hpn') || exp.nombreArchivo.toLowerCase().includes('andres') || exp.id === 'EXP-2026-836';
-            if (esAndres) {
+            const esCasoDemoOficial = exp.id === 'EXP-2026-836' && exp.codigoCaso === 'DU-AUD-836';
+            if (esCasoDemoOficial) {
               if (!exp.datos.codigo_cie10 || exp.datos.codigo_cie10 === 'No especificado en el documento') {
                 exp.datos.codigo_cie10 = 'D595';
               }
@@ -67,6 +66,17 @@ export const App: React.FC = () => {
               if (!exp.archivoBase64) {
                 exp.archivoBase64 = REAL_ANDRES_GIL_PDF_BASE64;
               }
+              return exp;
+            }
+
+            // Para casos cargados por el usuario:
+            // Si por la versión anterior se le asignó erróneamente el base64 de Andrés a un archivo ajeno, limpiarlo
+            const esBase64Andres = Boolean(
+              exp.archivoBase64 &&
+              exp.archivoBase64.startsWith(REAL_ANDRES_GIL_PDF_BASE64.substring(0, 50))
+            );
+            if (esBase64Andres && !exp.nombreArchivo.toLowerCase().includes('andres')) {
+              exp.archivoBase64 = undefined;
             }
             return exp;
           });

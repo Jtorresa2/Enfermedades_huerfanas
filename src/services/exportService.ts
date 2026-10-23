@@ -131,36 +131,29 @@ function openDusakawiDB(): Promise<IDBDatabase> {
   });
 }
 
-export function registrarArchivoEnCache(nombreArchivo: string, archivo: Blob | File) {
-  if (!nombreArchivo) return;
-  cacheArchivosOriginales.set(nombreArchivo, archivo);
-  const normKey = nombreArchivo.toLowerCase().trim();
+export function registrarArchivoEnCache(clave: string, archivo: Blob | File) {
+  if (!clave) return;
+  cacheArchivosOriginales.set(clave, archivo);
+  const normKey = clave.toLowerCase().trim();
   cacheArchivosOriginales.set(normKey, archivo);
-  const cleanKey = normKey.replace(/[\s_.-]+/g, '');
-  cacheArchivosOriginales.set(cleanKey, archivo);
 
   // Persistir asíncronamente en IndexedDB para que sobreviva a recargas del navegador
   openDusakawiDB().then(db => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
-    store.put(archivo, nombreArchivo);
+    store.put(archivo, clave);
     store.put(archivo, normKey);
-    store.put(archivo, cleanKey);
   }).catch(() => {});
 }
 
-export function obtenerArchivoDeCache(nombreArchivo: string): (Blob | File) | undefined {
-  if (!nombreArchivo) return undefined;
-  if (cacheArchivosOriginales.has(nombreArchivo)) {
-    return cacheArchivosOriginales.get(nombreArchivo);
+export function obtenerArchivoDeCache(clave?: string): (Blob | File) | undefined {
+  if (!clave) return undefined;
+  if (cacheArchivosOriginales.has(clave)) {
+    return cacheArchivosOriginales.get(clave);
   }
-  const normKey = nombreArchivo.toLowerCase().trim();
+  const normKey = clave.toLowerCase().trim();
   if (cacheArchivosOriginales.has(normKey)) {
     return cacheArchivosOriginales.get(normKey);
-  }
-  const cleanKey = normKey.replace(/[\s_.-]+/g, '');
-  if (cacheArchivosOriginales.has(cleanKey)) {
-    return cacheArchivosOriginales.get(cleanKey);
   }
   return undefined;
 }
@@ -233,7 +226,7 @@ function sanitizarTextoPdf(str?: string): string {
  */
 export function generarPdfHistoriaClinicaBlob(exp: IExpedienteClinico): Blob {
   const nombrePaciente = exp.datos?.paciente_nombre || exp.pacienteAnonimizado || 'Paciente Afiliado';
-  const identificacion = (exp.datos?.identificacion_paciente || exp.datos?.numero_historia_clinica || '1082836713').replace(/\D/g, '') || '1082836713';
+  const identificacion = (exp.datos?.identificacion_paciente || exp.datos?.numero_historia_clinica || '').replace(/\D/g, '') || exp.codigoCaso;
   const patologia = exp.datos?.enfermedad || 'Enfermedad Huerfana de Alto Costo';
   const cie10 = exp.datos?.codigo_cie10 || 'No especificado';
   const idMinsalud = exp.datos?.id_oficial_minsalud || 'No registrado';
@@ -393,7 +386,7 @@ export async function exportarLoteOrganizadoZip(expedientes: IExpedienteClinico[
   }>();
 
   for (const exp of expedientes) {
-    const hcNumero = (exp.datos?.numero_historia_clinica || exp.datos?.identificacion_paciente || '1082836713').replace(/\D/g, '');
+    const hcNumero = (exp.datos?.numero_historia_clinica || exp.datos?.identificacion_paciente || '').replace(/\D/g, '') || exp.codigoCaso;
     const clave = hcNumero || exp.pacienteAnonimizado;
 
     if (!pacientesMap.has(clave)) {
@@ -488,7 +481,9 @@ ${(exp.datos?.tratamiento_actual && exp.datos.tratamiento_actual.length > 0)
       carpetaPaciente.file(nombreArchivoResumen, resumenClinicoCompleto);
 
       // 2. Guardar el archivo PDF original de la historia clínica
-      const archivoOriginal = cacheArchivosOriginales.get(exp.nombreArchivo);
+      const archivoOriginal = obtenerArchivoDeCache(exp.id) ||
+                              obtenerArchivoDeCache(exp.codigoCaso) ||
+                              obtenerArchivoDeCache(exp.nombreArchivo);
       if (archivoOriginal) {
         carpetaPaciente.file(exp.nombreArchivo, archivoOriginal);
       }
